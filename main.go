@@ -55,13 +55,32 @@ func main() {
 		conf: conf,
 	}
 	
-	http.HandleFunc("/", lf.rootHandler)
-	http.HandleFunc("/login/", lf.githubLoginHandler)
-	http.HandleFunc("/github/callback/", lf.githubCallbackHandler)
+	mux := http.NewServeMux()
+	
+	mux.HandleFunc("/", lf.rootHandler)
+	mux.HandleFunc("/login/", lf.githubLoginHandler)
+	mux.HandleFunc("/github/callback/", lf.githubCallbackHandler)
+	mux.HandleFunc("GET /level/{slug}",levelHandler())
 
-	addr := "localhost:8000"
-	fmt.Printf("Listening on: http://%s\n", addr)
-	log.Panic(http.ListenAndServe(addr, nil))
+	log.Panic(http.ListenAndServe(":8000", mux))
+}
+
+func levelHandler() http.HandlerFunc {
+	return func (w http.ResponseWriter, r* http.Request) {
+		slug := r.PathValue("slug")
+		fileName := "./levels/"+slug+".md"
+		file , err := os.Open(fileName)
+		if err != nil {
+			log.Panic("file was not found",fileName)
+		}
+		defer file.Close()
+
+		b, err := io.ReadAll(file)
+		if err != nil {
+			log.Panic("can't read the file")	
+		}
+		fmt.Fprintf(w, string(b))
+	}
 }
 
 func (lf * loginFlow) rootHandler(w http.ResponseWriter, r *http.Request) {
