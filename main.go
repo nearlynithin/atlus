@@ -9,10 +9,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// temporary session ID storage in place of a db
-var sessions = map[string]string{}
-
-
 func main() {
 
 	err := godotenv.Load()
