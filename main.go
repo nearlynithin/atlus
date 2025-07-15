@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -17,9 +18,15 @@ import (
 	"golang.org/x/oauth2/github"
 )
 
+// temporary session ID storage in place of a db
+var sessions = map[string]string{}
 
 type loginFlow struct {
 	conf *oauth2.Config
+}
+
+type User struct {
+	Username string `json:"login"`
 }
 
 func main() {
@@ -59,25 +66,24 @@ func main() {
 
 func (lf * loginFlow) rootHandler(w http.ResponseWriter, r *http.Request) {
 	var loggedIn bool
+	var user string
 
-	if c, err := r.Cookie("login"); err == nil && c.Value == "success" {
-		loggedIn = true
+	if c, err := r.Cookie("session"); err == nil {
+		user = sessions[c.Value]
+		if user != "" {
+			loggedIn = true
+		}
 	}
 
 	tmpl := template.Must(template.ParseFiles("./static/index.html"))
 	tmpl.Execute(w, map[string]any{
 		"LoggedIn": loggedIn,
+		"User": user,
 	})
 }
 
 func (lf * loginFlow)githubLoginHandler(w http.ResponseWriter, r * http.Request){
-	b := make([]byte, 16)
-	if _, err := rand.Read(b); err != nil {
-		http.Error(w, "Failed to generate state", http.StatusInternalServerError)
-		return
-	}
-	state := hex.EncodeToString(b)
-
+	state := generateSessionID()
 	c := &http.Cookie{
 		Name: "state",
 		Value: state,
@@ -122,14 +128,21 @@ func (lf * loginFlow)githubCallbackHandler(w http.ResponseWriter, r * http.Reque
 	}
 	fmt.Printf("%s\n", body) // or string(body)
 
+	var user User
+	if err := json.Unmarshal(body, &user); err != nil {
+		log.Fatal("Failed to parse the login body", err)
+	}
+
+	sessionID := generateSessionID()
 	c := &http.Cookie{
-		Name: "login",
-		Value: "success",
+		Name: "session",
+		Value: sessionID,
 		Path: "/",
 		MaxAge: 60 * 60 * 24 * 30, // 30 days
 		HttpOnly: true,
 	}
 	http.SetCookie(w,c)
+	sessions[sessionID] = user.Username
 	http.Redirect(w,r,"/", http.StatusSeeOther)	
 }
 
@@ -147,4 +160,12 @@ func getGithubUserInfo(accessToken string) string {
 
 	resBody, _ := io.ReadAll(res.Body)
 	return string(resBody)
+}
+
+func generateSessionID() string {
+	b := make([]byte, 24)
+	if _, err := rand.Read(b); err != nil {
+		log.Fatal("Failed to generate session ID")
+	}
+	return hex.EncodeToString(b)
 }

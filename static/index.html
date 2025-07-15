@@ -4,6 +4,7 @@
 <body>
     {{if .LoggedIn}}
     <h1>Login successfull :)</h1>
+    <p>Hello {{.User}}!</p>
     {{else}}
     <a href="/login/">click here to login with Github</a>
     {{end}}
