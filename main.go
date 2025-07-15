@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/yuin/goldmark"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
 )
@@ -57,16 +59,33 @@ func main() {
 	
 	mux := http.NewServeMux()
 	
-	mux.HandleFunc("/", lf.rootHandler)
+	tpl := template.Must(template.ParseFiles("static/index.html"))
+	
+	mux.HandleFunc("/", lf.rootHandler(tpl))
 	mux.HandleFunc("/login/", lf.githubLoginHandler)
 	mux.HandleFunc("/github/callback/", lf.githubCallbackHandler)
-	mux.HandleFunc("GET /level/{slug}",levelHandler())
+	mux.HandleFunc("/level/{slug}",levelHandler(tpl))
 
 	log.Panic(http.ListenAndServe(":8000", mux))
 }
 
-func levelHandler() http.HandlerFunc {
+func levelHandler(tpl *template.Template) http.HandlerFunc {
 	return func (w http.ResponseWriter, r* http.Request) {
+		var loggedIn bool
+		var user string
+
+		if c, err := r.Cookie("session"); err == nil {
+			user = sessions[c.Value]
+			if user != "" {
+				loggedIn = true
+			}
+		}
+
+		if !loggedIn {
+			http.Redirect(w,r,"/login", http.StatusSeeOther)
+			return
+		}
+
 		slug := r.PathValue("slug")
 		fileName := "./levels/"+slug+".md"
 		file , err := os.Open(fileName)
@@ -79,29 +98,39 @@ func levelHandler() http.HandlerFunc {
 		if err != nil {
 			log.Panic("can't read the file")	
 		}
-		fmt.Fprintf(w, string(b))
-	}
-}
-
-func (lf * loginFlow) rootHandler(w http.ResponseWriter, r *http.Request) {
-	var loggedIn bool
-	var user string
-
-	if c, err := r.Cookie("session"); err == nil {
-		user = sessions[c.Value]
-		if user != "" {
-			loggedIn = true
+		var buf bytes.Buffer
+		if err := goldmark.Convert(b,&buf); err != nil {
+			log.Panic("Cannot read markdown")
 		}
-	}
 
-	tmpl := template.Must(template.ParseFiles("./static/index.html"))
-	tmpl.Execute(w, map[string]any{
-		"LoggedIn": loggedIn,
-		"User": user,
-	})
+		err = tpl.Execute(w, map[string]any{
+			"LoggedIn" : loggedIn,
+			"User": user,
+			"Content": template.HTML(buf.String()),
+		})
+	}
 }
 
-func (lf * loginFlow)githubLoginHandler(w http.ResponseWriter, r * http.Request){
+func (lf * loginFlow) rootHandler(tpl * template.Template) http.HandlerFunc {
+	return func (w http.ResponseWriter, r *http.Request) {
+		var loggedIn bool
+		var user string
+
+		if c, err := r.Cookie("session"); err == nil {
+			user = sessions[c.Value]
+			if user != "" {
+				loggedIn = true
+			}
+		}
+		
+		tpl.Execute(w, map[string]any{
+			"LoggedIn": loggedIn,
+			"User": user,
+		})
+	}
+}
+
+func (lf * loginFlow) githubLoginHandler(w http.ResponseWriter, r * http.Request){
 	state := generateSessionID()
 	c := &http.Cookie{
 		Name: "state",
@@ -118,7 +147,7 @@ func (lf * loginFlow)githubLoginHandler(w http.ResponseWriter, r * http.Request)
 }
 
 
-func (lf * loginFlow)githubCallbackHandler(w http.ResponseWriter, r * http.Request){
+func (lf * loginFlow) githubCallbackHandler(w http.ResponseWriter, r * http.Request){
 	state, err := r.Cookie("state")
 	if err != nil {
 		http.Error(w, "state not found", http.StatusBadRequest)
