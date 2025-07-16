@@ -5,8 +5,10 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-
 	"github.com/joho/godotenv"
+	"github.com/PlatypusPus/atlus/Backend/handlers"
+	"github.com/PlatypusPus/atlus/Backend/routes"
+	"github.com/PlatypusPus/atlus/Backend/models"
 )
 
 func main() {
@@ -27,8 +29,8 @@ func main() {
 	mux.HandleFunc("/", rootHandler(tpl))
 	mux.HandleFunc("/login/", lf.githubLoginHandler)
 	mux.HandleFunc("/github/callback/", lf.githubCallbackHandler)
-	mux.HandleFunc("/puzzles/{slug}",levelHandler(tpl))
-	mux.HandleFunc("/inputs/{slug}", inputHandler)
+	mux.HandleFunc("/puzzles/{slug}",handlers.levelHandler(tpl))
+	mux.HandleFunc("/inputs/{slug}", handlers.inputHandler)
 
 	addr := ":8000"
 	fmt.Printf("Listening on localhost%s ...\n",addr)
