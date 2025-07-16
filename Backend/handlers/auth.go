@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"context"
@@ -15,20 +15,18 @@ import (
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
+	"github.com/sceptix-club/atlus/Backend/globals"
 )
 
-// temporary session ID storage in place of a db
-var sessions = map[string]string{}
-
-type loginFlow struct {
-	conf *oauth2.Config
+type LoginFlow struct {
+	Conf *oauth2.Config
 }
 
 type User struct {
 	Username string `json:"login"`
 }
 
-func initOAuthConfig() *oauth2.Config{
+func InitOAuthConfig() *oauth2.Config{
 	
 	var GithubClientID = os.Getenv("GITHUB_CLIENT_ID")
 	var GithubClientSecret = os.Getenv("GITHUB_CLIENT_SECRET")
@@ -37,7 +35,7 @@ func initOAuthConfig() *oauth2.Config{
 		log.Fatal("client id and secret not initialized")
 	}
 	
-	conf := &oauth2.Config{
+	Conf := &oauth2.Config{
 		ClientID: GithubClientID,
 		ClientSecret: GithubClientSecret,
 		Scopes: []string{},
@@ -45,16 +43,16 @@ func initOAuthConfig() *oauth2.Config{
 		RedirectURL: "http://localhost:8000/github/callback/",
 	}
 	
-	return conf
+	return Conf
 }
 
-func rootHandler(tpl * template.Template) http.HandlerFunc {
+func RootHandler(tpl * template.Template) http.HandlerFunc {
 	return func (w http.ResponseWriter, r *http.Request) {
 		var loggedIn bool
 		var user string
 
 		if c, err := r.Cookie("session"); err == nil {
-			user = sessions[c.Value]
+			user = globals.Sessions[c.Value]
 			if user != "" {
 				loggedIn = true
 			}
@@ -67,8 +65,8 @@ func rootHandler(tpl * template.Template) http.HandlerFunc {
 	}
 }
 
-func (lf * loginFlow) githubLoginHandler(w http.ResponseWriter, r * http.Request){
-	state := generateSessionID()
+func (Lf * LoginFlow) GithubLoginHandler(w http.ResponseWriter, r * http.Request){
+	state := GenerateSessionID()
 	c := &http.Cookie{
 		Name: "state",
 		Value: state,
@@ -79,12 +77,12 @@ func (lf * loginFlow) githubLoginHandler(w http.ResponseWriter, r * http.Request
 	}
 	http.SetCookie(w,c)
 
-	redirectURL := lf.conf.AuthCodeURL(state, oauth2.AccessTypeOnline)
+	redirectURL := Lf.Conf.AuthCodeURL(state, oauth2.AccessTypeOnline)
 	http.Redirect(w, r, redirectURL, 301)
 }
 
 
-func (lf * loginFlow) githubCallbackHandler(w http.ResponseWriter, r * http.Request){
+func (Lf * LoginFlow) GithubCallbackHandler(w http.ResponseWriter, r * http.Request){
 	state, err := r.Cookie("state")
 	if err != nil {
 		http.Error(w, "state not found", http.StatusBadRequest)
@@ -97,12 +95,12 @@ func (lf * loginFlow) githubCallbackHandler(w http.ResponseWriter, r * http.Requ
 	}
 
 	code := r.URL.Query().Get("code")
-	tok, err := lf.conf.Exchange(context.Background(), code)
+	tok, err := Lf.Conf.Exchange(context.Background(), code)
 	if err != nil{
 		log.Fatal(err)
 	}
 
-	client := lf.conf.Client(context.Background(), tok)
+	client := Lf.Conf.Client(context.Background(), tok)
 	res, err := client.Get("https://api.github.com/user")
 	if err != nil {
 		panic(err)
@@ -118,7 +116,7 @@ func (lf * loginFlow) githubCallbackHandler(w http.ResponseWriter, r * http.Requ
 		log.Fatal("Failed to parse the login body", err)
 	}
 
-	sessionID := generateSessionID()
+	sessionID := GenerateSessionID()
 	c := &http.Cookie{
 		Name: "session",
 		Value: sessionID,
@@ -127,11 +125,11 @@ func (lf * loginFlow) githubCallbackHandler(w http.ResponseWriter, r * http.Requ
 		HttpOnly: true,
 	}
 	http.SetCookie(w,c)
-	sessions[sessionID] = user.Username
+	globals.Sessions[sessionID] = user.Username
 	http.Redirect(w,r,"/", http.StatusSeeOther)	
 }
 
-func getGithubUserInfo(accessToken string) string {
+func GetGithubUserInfo(accessToken string) string {
 	req, err := http.NewRequest("GET", "https://api.github.com/user", nil)
 	if err != nil {
 		panic(err)
@@ -147,7 +145,7 @@ func getGithubUserInfo(accessToken string) string {
 	return string(resBody)
 }
 
-func generateSessionID() string {
+func GenerateSessionID() string {
 	b := make([]byte, 24)
 	if _, err := rand.Read(b); err != nil {
 		log.Fatal("Failed to generate session ID")
