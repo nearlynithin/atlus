@@ -48,7 +48,7 @@ func initOAuthConfig() *oauth2.Config{
 	return conf
 }
 
-func (lf * loginFlow) rootHandler(tpl * template.Template) http.HandlerFunc {
+func rootHandler(tpl * template.Template) http.HandlerFunc {
 	return func (w http.ResponseWriter, r *http.Request) {
 		var loggedIn bool
 		var user string
