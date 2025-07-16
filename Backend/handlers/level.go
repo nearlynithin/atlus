@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"bytes"
@@ -8,16 +8,17 @@ import (
 	"net/http"
 	"os"
 	"github.com/yuin/goldmark"
+	"github.com/sceptix-club/atlus/Backend/globals"
 )
 
 
-func levelHandler(tpl *template.Template) http.HandlerFunc {
+func LevelHandler(tpl *template.Template) http.HandlerFunc {
 	return func (w http.ResponseWriter, r* http.Request) {
 		var loggedIn bool
 		var user string
 
 		if c, err := r.Cookie("session"); err == nil {
-			user = sessions[c.Value]
+			user = globals.Sessions[c.Value]
 			if user != "" {
 				loggedIn = true
 			}
