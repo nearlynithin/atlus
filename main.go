@@ -18,6 +18,7 @@ func main() {
 	}
 
 
+	handlers.InitDB()
 	mux := http.NewServeMux()
 	tpl := template.Must(template.ParseFiles("static/index.html"))
 	conf := handlers.InitOAuthConfig()
