@@ -35,7 +35,7 @@ func InitOAuthConfig() *oauth2.Config{
 		ClientSecret: GithubClientSecret,
 		Scopes: []string{"user:email"},
 		Endpoint: github.Endpoint,
-		RedirectURL: "http://localhost:8000/github/callback/",
+		RedirectURL: "http://"+globals.Hostname+":8000/github/callback/",
 	}
 	
 	return Conf
@@ -43,12 +43,17 @@ func InitOAuthConfig() *oauth2.Config{
 
 func RootHandler(tpl * template.Template) http.HandlerFunc {
 	return func (w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
 		var loggedIn bool
 		var user string
 
 		if c, err := r.Cookie("session"); err == nil {
-			user = globals.Sessions[c.Value]
-			if user != "" {
+			user, err = fetchUser(ctx,c.Value)
+			if err != nil {
+				loggedIn = false
+			}else {
+				fmt.Printf("FETCHED USER :",user)
 				loggedIn = true
 			}
 		}
@@ -71,6 +76,7 @@ func (Lf * LoginFlow) GithubLoginHandler(w http.ResponseWriter, r * http.Request
 		HttpOnly: true,
 	}
 	http.SetCookie(w,c)
+	fmt.Printf("State set %s",state)
 
 	redirectURL := Lf.Conf.AuthCodeURL(state, oauth2.AccessTypeOnline)
 	http.Redirect(w, r, redirectURL, 301)
@@ -112,7 +118,8 @@ func (Lf * LoginFlow) GithubCallbackHandler(w http.ResponseWriter, r * http.Requ
 	}
 	http.SetCookie(w,c)
 	
-	globals.Sessions[user.SessionToken] = user.Username
+	// adding the user to db
+	addUser(ctx, user)
 	http.Redirect(w,r,"/", http.StatusSeeOther)	
 }
 
