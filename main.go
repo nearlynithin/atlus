@@ -5,7 +5,10 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
+
 	"github.com/joho/godotenv"
+	"github.com/sceptix-club/atlus/Backend/globals"
 	"github.com/sceptix-club/atlus/Backend/handlers"
 )
 
@@ -16,6 +19,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Unable to load .env")
 	}
+	globals.Hostname = os.Getenv("HOSTNAME")
+	globals.Port = os.Getenv("PORT")
 
 
 	handlers.InitDB()
@@ -31,7 +36,6 @@ func main() {
 	mux.HandleFunc("/puzzles/{slug}",handlers.LevelHandler(tpl))
 	mux.HandleFunc("/inputs/{slug}", handlers.InputHandler)
 
-	addr := ":8000"
-	fmt.Printf("Listening on localhost%s ...\n",addr)
-	log.Panic(http.ListenAndServe(":8000", mux))
+	fmt.Printf("Listening on %s%s ...\n",globals.Hostname,globals.Port)
+	log.Panic(http.ListenAndServe(":"+globals.Port, mux))
 }

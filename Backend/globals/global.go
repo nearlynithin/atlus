@@ -4,6 +4,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+var Hostname string
+var Port string
+
 type User struct {
 	Github_id int64 `json:"id"`
 	Username string `json:"login"`
