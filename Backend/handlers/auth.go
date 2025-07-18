@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -13,17 +12,13 @@ import (
 	"os"
 	"time"
 
+	"github.com/sceptix-club/atlus/Backend/globals"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
-	"github.com/sceptix-club/atlus/Backend/globals"
 )
 
 type LoginFlow struct {
 	Conf *oauth2.Config
-}
-
-type User struct {
-	Username string `json:"login"`
 }
 
 func InitOAuthConfig() *oauth2.Config{
@@ -38,7 +33,7 @@ func InitOAuthConfig() *oauth2.Config{
 	Conf := &oauth2.Config{
 		ClientID: GithubClientID,
 		ClientSecret: GithubClientSecret,
-		Scopes: []string{},
+		Scopes: []string{"user:email"},
 		Endpoint: github.Endpoint,
 		RedirectURL: "http://localhost:8000/github/callback/",
 	}
@@ -83,6 +78,8 @@ func (Lf * LoginFlow) GithubLoginHandler(w http.ResponseWriter, r * http.Request
 
 
 func (Lf * LoginFlow) GithubCallbackHandler(w http.ResponseWriter, r * http.Request){
+	ctx := r.Context()
+
 	state, err := r.Cookie("state")
 	if err != nil {
 		http.Error(w, "state not found", http.StatusBadRequest)
@@ -95,12 +92,35 @@ func (Lf * LoginFlow) GithubCallbackHandler(w http.ResponseWriter, r * http.Requ
 	}
 
 	code := r.URL.Query().Get("code")
-	tok, err := Lf.Conf.Exchange(context.Background(), code)
+	tok, err := Lf.Conf.Exchange(ctx, code)
 	if err != nil{
 		log.Fatal(err)
 	}
 
-	client := Lf.Conf.Client(context.Background(), tok)
+	client := Lf.Conf.Client(ctx, tok)
+
+	var user globals.User
+	user = GetGithubUserInfo(client)
+	fmt.Printf("%+v\n",user)
+
+	c := &http.Cookie{
+		Name: "session",
+		Value: user.SessionToken,
+		Path: "/",
+		MaxAge: 60 * 60 * 24 * 30, // 30 days
+		HttpOnly: true,
+	}
+	http.SetCookie(w,c)
+	
+	globals.Sessions[user.SessionToken] = user.Username
+	http.Redirect(w,r,"/", http.StatusSeeOther)	
+}
+
+func GetGithubUserInfo(client  *http.Client) globals.User {
+
+	var user globals.User
+	var emails []globals.Email
+
 	res, err := client.Get("https://api.github.com/user")
 	if err != nil {
 		panic(err)
@@ -109,40 +129,34 @@ func (Lf * LoginFlow) GithubCallbackHandler(w http.ResponseWriter, r * http.Requ
 	if err != nil {
 		log.Fatal("Failed to read response body:", err)
 	}
-	fmt.Printf("%s\n", body) // or string(body)
 
-	var user User
 	if err := json.Unmarshal(body, &user); err != nil {
 		log.Fatal("Failed to parse the login body", err)
 	}
 
-	sessionID := GenerateSessionID()
-	c := &http.Cookie{
-		Name: "session",
-		Value: sessionID,
-		Path: "/",
-		MaxAge: 60 * 60 * 24 * 30, // 30 days
-		HttpOnly: true,
-	}
-	http.SetCookie(w,c)
-	globals.Sessions[sessionID] = user.Username
-	http.Redirect(w,r,"/", http.StatusSeeOther)	
-}
-
-func GetGithubUserInfo(accessToken string) string {
-	req, err := http.NewRequest("GET", "https://api.github.com/user", nil)
+	emailRes, err := client.Get("https://api.github.com/user/emails")
 	if err != nil {
-		panic(err)
+		log.Fatal("Failed to get emails ",err)
 	}
+	defer emailRes.Body.Close()
 
-	req.Header.Set("Authorization", "Bearer "+accessToken)
-	res, err := http.DefaultClient.Do(req)
+	emailBody, err := io.ReadAll(emailRes.Body)
 	if err != nil {
-		panic(err)
+		log.Fatal("Failed to read email body ",err)
 	}
 
-	resBody, _ := io.ReadAll(res.Body)
-	return string(resBody)
+	if err:= json.Unmarshal(emailBody, &emails); err != nil {
+		log.Fatal("Failed to parse email list ",err)
+	}
+
+	for _, e:= range emails {
+		if e.Primary && e.Verified {
+			user.Email = e.Email
+			break
+		}
+	}
+	user.SessionToken = GenerateSessionID() 
+	return user
 }
 
 func GenerateSessionID() string {
