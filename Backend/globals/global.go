@@ -23,6 +23,9 @@ type Email struct {
 	Visibility string `json:"visibility"`
 }
 
-var Sessions = map[string]string{}
+type SessionData struct {
+	InputID int
+	CurrentLevel int
+}
 
 var DB *pgxpool.Pool

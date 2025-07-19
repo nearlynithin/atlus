@@ -2,38 +2,56 @@ package handlers
 
 import (
 	"bytes"
+	"fmt"
 	"html/template"
 	"io"
 	"log"
 	"net/http"
 	"os"
+
 	"github.com/yuin/goldmark"
-	"github.com/sceptix-club/atlus/Backend/globals"
 )
 
 
 func LevelHandler(tpl *template.Template) http.HandlerFunc {
 	return func (w http.ResponseWriter, r* http.Request) {
+		ctx := r.Context()
 		var loggedIn bool
-		var user string
 
-		if c, err := r.Cookie("session"); err == nil {
-			user = globals.Sessions[c.Value]
-			if user != "" {
-				loggedIn = true
-			}
-		}
-
-		if !loggedIn {
-			http.Redirect(w,r,"/login", http.StatusSeeOther)
+		slug := r.PathValue("slug")
+		level, err := getLevelParam(slug)
+		if err != nil{
+			http.Error(w, "Invalid url request", http.StatusBadRequest)
 			return
 		}
 
-		slug := r.PathValue("slug")
-		fileName := "./puzzles/"+slug+"/"+slug+".md"
-		file , err := os.Open(fileName)
+		c, err := r.Cookie("session");
 		if err != nil {
-			log.Panic("file was not found",fileName)
+			http.Error(w, "session invalid ", http.StatusUnauthorized)
+			return
+		}
+
+		sdata , err := getSessionData(ctx, c.Value)
+		if err != nil {
+			http.Error(w, "Please login to play", http.StatusUnauthorized)
+			return
+		}else {
+			loggedIn = true
+		}
+
+		if level > sdata.CurrentLevel {
+			http.Error(w, fmt.Sprintf("Level not unlocked yet, please complete level%d first",sdata.CurrentLevel),
+			http.StatusForbidden)
+			return
+		}
+
+		newSlug := fmt.Sprintf("level%d",level)
+		filePath := "./puzzles/"+newSlug+"/"+newSlug+".md"
+		file , err := os.Open(filePath)
+		if err != nil {
+			log.Printf("LevelHandler: failed to open file %s: %v", filePath, err)
+			http.Error(w, "Puzzle file not found", http.StatusNotFound)
+			return
 		}
 		defer file.Close()
 
@@ -48,7 +66,6 @@ func LevelHandler(tpl *template.Template) http.HandlerFunc {
 
 		err = tpl.Execute(w, map[string]any{
 			"LoggedIn" : loggedIn,
-			"User": user,
 			"Content": template.HTML(buf.String()),
 		})
 	}

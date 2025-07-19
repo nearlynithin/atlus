@@ -111,3 +111,19 @@ func updateSessionToken(ctx context.Context, githubID int64, newSessionID string
 
 	return nil
 }
+
+func getSessionData(ctx context.Context, sessionID string) (globals.SessionData, error) {
+	var sdata globals.SessionData
+
+	err := globals.DB.QueryRow(ctx,`
+		SELECT u.input_id, u.current_level FROM users u
+		JOIN sessions s on s.github_id = u.github_id
+		WHERE s.session_id = $1 AND s.expires_at > NOW()
+		`, sessionID).Scan(&sdata.InputID, &sdata.CurrentLevel)
+	
+	if err != nil {
+		return globals.SessionData{}, err 
+	}
+
+	return sdata, nil
+}
