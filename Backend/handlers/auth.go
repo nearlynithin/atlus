@@ -100,26 +100,52 @@ func (Lf * LoginFlow) GithubCallbackHandler(w http.ResponseWriter, r * http.Requ
 	code := r.URL.Query().Get("code")
 	tok, err := Lf.Conf.Exchange(ctx, code)
 	if err != nil{
-		log.Fatal(err)
+		fmt.Errorf("failed to exchange code: %w",err)
+		return
 	}
 
 	client := Lf.Conf.Client(ctx, tok)
 
-	var user globals.User
-	user = GetGithubUserInfo(client)
-	fmt.Printf("%+v\n",user)
+	githubUser := GetGithubUserInfo(client)
+
+	// check for existing user
+	existingUser, err := fetchUserByGithubID(ctx, githubUser.Github_id)
+	if err != nil {
+		// user not found
+		githubUser.SessionToken = GenerateSessionID()
+		err = addUser(ctx, githubUser)
+		if err != nil {
+			http.Error(w, "Failed to add user",http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// user was found, update a new session Token
+		githubUser = existingUser
+		githubUser.SessionToken = GenerateSessionID()
+		err := updateSessionToken(ctx, githubUser.Github_id, githubUser.SessionToken)
+		if err != nil {
+			http.Error(w, "failed to update session token", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	stateClear := &http.Cookie{
+		Name: "state",
+		Value: "",
+		Path: "/",
+		MaxAge: -1,
+		HttpOnly: true,
+	}
+	http.SetCookie(w,stateClear)
 
 	c := &http.Cookie{
 		Name: "session",
-		Value: user.SessionToken,
+		Value: githubUser.SessionToken,
 		Path: "/",
 		MaxAge: 60 * 60 * 24 * 30, // 30 days
 		HttpOnly: true,
 	}
 	http.SetCookie(w,c)
-	
-	// adding the user to db
-	addUser(ctx, user)
 	http.Redirect(w,r,"/", http.StatusSeeOther)	
 }
 
