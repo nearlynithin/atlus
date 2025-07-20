@@ -9,6 +9,14 @@
     {{else}}
     <a href="/login/">click here to login with Github</a>
     {{end}}
+
+    {{if .Slug}}
+    <form action="/submitAnswer/{{.Slug}}" method="POST">
+        <label for="answer">Enter your answer:</label><br>
+        <input type="text" id="answer" name="answer" required />
+        <button type="submit">Submit</button>
+    </form>
+    {{end}}
 </body>
 
 </html>

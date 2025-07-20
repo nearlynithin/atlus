@@ -66,6 +66,7 @@ func LevelHandler(tpl *template.Template) http.HandlerFunc {
 
 		err = tpl.Execute(w, map[string]any{
 			"LoggedIn" : loggedIn,
+			"Slug" : newSlug,
 			"Content": template.HTML(buf.String()),
 		})
 	}
