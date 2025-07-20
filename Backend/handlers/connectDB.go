@@ -8,10 +8,16 @@ import (
 	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 	"github.com/sceptix-club/atlus/Backend/globals"
 )
 
 func InitDB() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file:", err)
+	}
+
 	ctx := context.Background()
 	pool, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
 	if err != nil {
@@ -26,7 +32,7 @@ func InitDB() {
 	log.Println("Connected via pooler to:", version)
 	globals.DB = pool
 
-	forkPtr := flag.Bool("dev", false ,"DEV MODE : to truncate all db tables, on startup")
+	forkPtr := flag.Bool("dev", false, "DEV MODE : to truncate all db tables, on startup")
 	flag.Parse()
 	if *forkPtr {
 		globals.DB.Exec(ctx, "TRUNCATE table users, sessions;")
@@ -34,8 +40,26 @@ func InitDB() {
 	}
 }
 
-func addUser(ctx context.Context, user globals.User) (error) {
+func addUser(ctx context.Context, user globals.User) error {
 	var inputID int
+	globals.DB.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS users (
+			input_id SERIAL PRIMARY KEY,
+			github_id BIGINT UNIQUE NOT NULL,
+			username TEXT,
+			github_url TEXT,
+			avatar TEXT,
+			email TEXT,
+			current_level INT DEFAULT 0
+		);
+
+		CREATE TABLE IF NOT EXISTS sessions (
+			session_id TEXT PRIMARY KEY,
+			github_id BIGINT REFERENCES users(github_id),
+			input_id INT REFERENCES users(input_id),
+			expires_at TIMESTAMPTZ
+		);
+	`)
 	err := globals.DB.QueryRow(ctx,
 		`INSERT INTO users (github_id, username, github_url, avatar, email)
 		 VALUES ($1, $2, $3, $4, $5)
@@ -85,7 +109,7 @@ func fetchUserByGithubID(ctx context.Context, githubID int64) (globals.User, err
 
 	err := globals.DB.QueryRow(ctx, `
 		SELECT github_id, username, github_url, avatar, email  FROM users where github_id = $1
-	`, githubID).Scan(&user.Github_id, &user.Username, &user.Github_url,&user.Avatar_url, &user.Email )
+	`, githubID).Scan(&user.Github_id, &user.Username, &user.Github_url, &user.Avatar_url, &user.Email)
 	if err != nil {
 		return user, err
 	}
@@ -94,7 +118,7 @@ func fetchUserByGithubID(ctx context.Context, githubID int64) (globals.User, err
 	return user, nil
 }
 
-func updateSessionToken(ctx context.Context, githubID int64, newSessionID string) (error) {
+func updateSessionToken(ctx context.Context, githubID int64, newSessionID string) error {
 
 	_, err := globals.DB.Exec(ctx, `
 		INSERT INTO sessions (github_id, session_id, expires_at)
@@ -115,14 +139,14 @@ func updateSessionToken(ctx context.Context, githubID int64, newSessionID string
 func getSessionData(ctx context.Context, sessionID string) (globals.SessionData, error) {
 	var sdata globals.SessionData
 
-	err := globals.DB.QueryRow(ctx,`
+	err := globals.DB.QueryRow(ctx, `
 		SELECT u.input_id, u.current_level FROM users u
 		JOIN sessions s on s.github_id = u.github_id
 		WHERE s.session_id = $1 AND s.expires_at > NOW()
 		`, sessionID).Scan(&sdata.InputID, &sdata.CurrentLevel)
-	
+
 	if err != nil {
-		return globals.SessionData{}, err 
+		return globals.SessionData{}, err
 	}
 
 	return sdata, nil
