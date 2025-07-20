@@ -29,6 +29,18 @@ func InitDB() {
 		log.Fatalf("Query test failed: %v", err)
 	}
 
+	schema, err := os.ReadFile("schema.sql")
+	if err != nil {
+		log.Fatalf("Unable to find schema.sql", err)
+	}
+
+	_, err = pool.Exec(ctx, string(schema))
+	if err != nil {
+		log.Fatalf("Unable to create tables", err)
+	}else {
+		fmt.Println("Tables created successfully")
+	}
+
 	log.Println("Connected via pooler to:", version)
 	globals.DB = pool
 
@@ -42,24 +54,7 @@ func InitDB() {
 
 func addUser(ctx context.Context, user globals.User) error {
 	var inputID int
-	globals.DB.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS users (
-			input_id SERIAL PRIMARY KEY,
-			github_id BIGINT UNIQUE NOT NULL,
-			username TEXT,
-			github_url TEXT,
-			avatar TEXT,
-			email TEXT,
-			current_level INT DEFAULT 0
-		);
-
-		CREATE TABLE IF NOT EXISTS sessions (
-			session_id TEXT PRIMARY KEY,
-			github_id BIGINT REFERENCES users(github_id),
-			input_id INT REFERENCES users(input_id),
-			expires_at TIMESTAMPTZ
-		);
-	`)
+	
 	err := globals.DB.QueryRow(ctx,
 		`INSERT INTO users (github_id, username, github_url, avatar, email)
 		 VALUES ($1, $2, $3, $4, $5)
