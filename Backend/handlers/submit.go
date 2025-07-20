@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -17,6 +16,8 @@ func SubmitAnswerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx := r.Context()
+
 	// Extract session cookie
 	cookie, err := r.Cookie("session")
 	if err != nil {
@@ -25,8 +26,15 @@ func SubmitAnswerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	sessionID := cookie.Value
 
+	slug := r.PathValue("slug")
+	level, err := getLevelParam(slug)
+	if err != nil {
+		http.Error(w,"Invalid url request", http.StatusBadRequest)
+		return
+	}
+	newSlug := fmt.Sprintf("level%d",level)
+
 	// Get session info from DB
-	ctx := context.Background()
 	sdata, err := getSessionData(ctx, sessionID)
 	if err != nil {
 		http.Error(w, "Invalid or expired session", http.StatusUnauthorized)
@@ -41,7 +49,7 @@ func SubmitAnswerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Construct path: data/{level}/answers/{input_id}.txt
-	answerFile := fmt.Sprintf("data/%d/answers/%d.txt", sdata.CurrentLevel, sdata.InputID)
+	answerFile := fmt.Sprintf("./puzzles/%s/outputs/%d.txt", newSlug, sdata.InputID)
 	correctBytes, err := os.ReadFile(answerFile)
 	if err != nil {
 		http.Error(w, "Correct answer file not found", http.StatusInternalServerError)

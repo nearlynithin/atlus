@@ -35,7 +35,7 @@ func main() {
 	mux.HandleFunc("/github/callback/", lf.GithubCallbackHandler)
 	mux.HandleFunc("/puzzles/{slug}",handlers.LevelHandler(tpl))
 	mux.HandleFunc("/inputs/{slug}", handlers.InputHandler)
-	mux.HandleFunc("/submitAnswer", handlers.SubmitAnswerHandler)
+	mux.HandleFunc("/submitAnswer/{slug}", handlers.SubmitAnswerHandler)
 
 
 	fmt.Printf("Listening on %s%s ...\n",globals.Hostname,globals.Port)
