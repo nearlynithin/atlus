@@ -16,7 +16,6 @@ import (
 func LevelHandler(tpl *template.Template) http.HandlerFunc {
 	return func (w http.ResponseWriter, r* http.Request) {
 		ctx := r.Context()
-		var loggedIn bool
 
 		slug := r.PathValue("slug")
 		level, err := getLevelParam(slug)
@@ -35,8 +34,6 @@ func LevelHandler(tpl *template.Template) http.HandlerFunc {
 		if err != nil {
 			http.Error(w, "Please login to play", http.StatusUnauthorized)
 			return
-		}else {
-			loggedIn = true
 		}
 
 		if level > sdata.CurrentLevel {
@@ -64,8 +61,7 @@ func LevelHandler(tpl *template.Template) http.HandlerFunc {
 			log.Panic("Cannot read markdown")
 		}
 
-		err = tpl.Execute(w, map[string]any{
-			"LoggedIn" : loggedIn,
+		tpl.ExecuteTemplate(w, "level", map[string]any{
 			"Slug" : newSlug,
 			"Content": template.HTML(buf.String()),
 		})

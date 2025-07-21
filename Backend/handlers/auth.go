@@ -57,11 +57,22 @@ func RootHandler(tpl * template.Template) http.HandlerFunc {
 				loggedIn = true
 			}
 		}
-		
-		tpl.Execute(w, map[string]any{
-			"LoggedIn": loggedIn,
-			"User": user,
+
+		levels := make([]int, 30)
+		for i := range levels {
+  			levels[i] = i + 1
+		}
+
+		err := tpl.ExecuteTemplate(w, "base", map[string]any{
+		    "Home":     true,
+		    "LoggedIn": loggedIn,
+		    "User":     user,
+		    "Levels":   levels,
 		})
+		
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}
 }
 

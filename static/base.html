@@ -1,0 +1,29 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Atlus</title>
+</head>
+
+<body>
+    <h2>Pretend there is a navbar here</h2>
+    {{if .Home}}
+    {{if .LoggedIn}}
+    <p>Welcome {{.User}}!</p>
+    <ul>
+        {{range $i, $ := .Levels}}
+        <li><a href="/puzzles/level{{$}}">Level {{$}}</a></li>
+        {{end}}
+    </ul>
+    {{else}}
+    <p>You need to log in through Github to continue</p>
+    <a href="/login/">Click here to login with Github</a>
+    {{end}}</p>
+    {{end}}
+
+    {{block "content" .}}Default content{{end}}
+</body>
+
+</html>
+{{end}}

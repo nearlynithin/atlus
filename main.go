@@ -25,7 +25,7 @@ func main() {
 
 	handlers.InitDB()
 	mux := http.NewServeMux()
-	tpl := template.Must(template.ParseFiles("static/index.html"))
+	tpl := template.Must(template.ParseGlob("static/*.html"))
 	conf := handlers.InitOAuthConfig()
 	lf := handlers.LoginFlow{Conf: conf}
 
