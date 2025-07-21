@@ -120,11 +120,12 @@ func updateSessionToken(ctx context.Context, githubID int64, newSessionID string
 		VALUES ($1, $2, NOW() + INTERVAL '30 day')
 		ON CONFLICT (github_id)
 		DO UPDATE SET 
-		session_id = EXCLUDED.session_id
+		session_id = EXCLUDED.session_id,
 		expires_at = EXCLUDED.expires_at
 	`, githubID, newSessionID)
 
 	if err != nil {
+		log.Fatal(err)
 		return err
 	}
 

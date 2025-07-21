@@ -79,7 +79,7 @@ func (Lf * LoginFlow) GithubLoginHandler(w http.ResponseWriter, r * http.Request
 	fmt.Printf("State set %s",state)
 
 	redirectURL := Lf.Conf.AuthCodeURL(state, oauth2.AccessTypeOnline)
-	http.Redirect(w, r, redirectURL, 301)
+	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 }
 
 
