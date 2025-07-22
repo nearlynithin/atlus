@@ -25,6 +25,7 @@ func main() {
 
 	handlers.InitDB()
 	mux := http.NewServeMux()
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	tpl := template.Must(template.ParseGlob("static/*.html"))
 	conf := handlers.InitOAuthConfig()
 	lf := handlers.LoginFlow{Conf: conf}
@@ -36,6 +37,7 @@ func main() {
 	mux.HandleFunc("/puzzles/{slug}",handlers.LevelHandler(tpl))
 	mux.HandleFunc("/inputs/{slug}", handlers.InputHandler)
 	mux.HandleFunc("/submitAnswer/{slug}", handlers.SubmitAnswerHandler)
+	mux.HandleFunc("/leaderboard/", handlers.LeaderboardHandler(tpl))
 
 
 	fmt.Printf("Listening on %s%s ...\n",globals.Hostname,globals.Port)
