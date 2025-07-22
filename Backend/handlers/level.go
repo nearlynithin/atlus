@@ -36,6 +36,8 @@ func LevelHandler(tpl *template.Template) http.HandlerFunc {
 			return
 		}
 
+		loggedIn := true
+
 		if level > sdata.CurrentLevel {
 			http.Error(w, fmt.Sprintf("Level not unlocked yet, please complete level%d first",sdata.CurrentLevel),
 			http.StatusForbidden)
@@ -62,6 +64,8 @@ func LevelHandler(tpl *template.Template) http.HandlerFunc {
 		}
 
 		tpl.ExecuteTemplate(w, "level", map[string]any{
+			"Level" : true,
+			"LoggedIn": loggedIn,
 			"Slug" : newSlug,
 			"Content": template.HTML(buf.String()),
 		})

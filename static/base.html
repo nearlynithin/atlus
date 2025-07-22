@@ -4,26 +4,50 @@
 
 <head>
     <title>Atlus</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Caesar+Dressing&family=Cascadia+Mono:ital,wght@0,200..700;1,200..700&family=Sometype+Mono&display=swap"
+        rel="stylesheet">
+    <link href="/static/retro.css" rel="stylesheet">
 </head>
 
 <body>
-    <h2>Pretend there is a navbar here</h2>
-    {{if .Home}}
-    {{if .LoggedIn}}
-    <p>Welcome {{.User}}!</p>
-    <ul>
-        {{range $i, $ := .Levels}}
-        <li><a href="/puzzles/level{{$}}">Level {{$}}</a></li>
-        {{end}}
-    </ul>
-    {{else}}
-    <p>You need to log in through Github to continue</p>
-    <a href="/login/">Click here to login with Github</a>
-    {{end}}</p>
-    {{end}}
+    <nav>
+        <div class="nav-left">
+            <a href="/">Atlus</a>
+        </div>
+        <div class="nav-right">
+            {{if .LoggedIn}}
+            <a href="/leaderboard">Leaderboard</a>
+            <a href="/logout/">Logout</a>
+            {{else}}
+            <a href="/login/">Login</a>
+            {{end}}
+        </div>
+    </nav>
 
-    {{block "content" .}}Default content{{end}}
+    <div class="main-content">
+        <!-- Your existing level list, etc. -->
+        {{if .Home}}
+        {{if .LoggedIn}}
+        <p>Welcome {{.User}}!</p>
+        <ul>
+            {{range $i, $ := .Levels}}
+            <li><a href="/puzzles/level{{$}}">Level {{$}}</a></li>
+            {{end}}
+        </ul>
+        {{else}}
+        <p>You need to log in through Github to continue</p>
+        <a href="/login/">Click here to login with Github</a>
+        {{end}}
+        {{end}}
+
+        {{block "levelContent" .}}{{end}}
+        {{block "leaderboardContent" .}}{{end}}
+    </div>
 </body>
+
 
 </html>
 {{end}}
