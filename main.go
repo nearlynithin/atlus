@@ -33,6 +33,7 @@ func main() {
 	
 	mux.HandleFunc("/",  handlers.RootHandler(tpl))
 	mux.HandleFunc("/login/", lf.GithubLoginHandler)
+	mux.HandleFunc("/logout/", handlers.GithubLogoutHandler)
 	mux.HandleFunc("/github/callback/", lf.GithubCallbackHandler)
 	mux.HandleFunc("/puzzles/{slug}",handlers.LevelHandler(tpl))
 	mux.HandleFunc("/inputs/{slug}", handlers.InputHandler)

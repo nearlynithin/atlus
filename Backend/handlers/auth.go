@@ -160,6 +160,32 @@ func (Lf * LoginFlow) GithubCallbackHandler(w http.ResponseWriter, r * http.Requ
 	http.Redirect(w,r,"/", http.StatusSeeOther)	
 }
 
+func GithubLogoutHandler(w http.ResponseWriter, r* http.Request) {
+	ctx := r.Context()
+	c, err := r.Cookie("session")
+	if err != nil {
+		log.Printf(err.Error())
+		http.Redirect(w,r,"/", http.StatusSeeOther)	
+		return
+	}
+	sessionID := c.Value
+
+	err = deleteSessionToken(ctx, sessionID)
+	if err != nil {
+		log.Printf("Unable to delete session")
+		log.Printf(err.Error())
+	}
+	sessionClear := &http.Cookie{
+		Name: "session",
+		Value: "",
+		Path: "/",
+		MaxAge: -1,
+		HttpOnly: true,
+	}
+	http.SetCookie(w,sessionClear)
+	http.Redirect(w,r,"/", http.StatusSeeOther)	
+}
+
 func GetGithubUserInfo(client  *http.Client) globals.User {
 
 	var user globals.User

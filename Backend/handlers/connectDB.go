@@ -147,3 +147,18 @@ func getSessionData(ctx context.Context, sessionID string) (globals.SessionData,
 
 	return sdata, nil
 }
+
+
+func deleteSessionToken(ctx context.Context, sessionID string) error {
+	_, err := globals.DB.Exec(ctx, `
+		DELETE FROM sessions
+		WHERE session_id = $1
+	`, sessionID)
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Deleting session : %s\n", sessionID)
+	return nil
+}
