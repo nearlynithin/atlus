@@ -1,0 +1,280 @@
+:root {
+  --gold: #ffe9ba;
+  --yellow-gold: #ffc548;
+  --gold-dark: #ecc67e;
+  --bg-dark: #0a0706;
+  --code-bg: #1a140f;
+  --text-main: #fafafa;
+}
+
+html,
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: "Sometype Mono";
+  font-size: 18px;
+  line-height: 1.45;
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+h1,
+.retro-h1 {
+  font-family: "Caesar Dressing";
+  color: var(--yellow-gold);
+  font-size: 3rem;
+  margin-top: 0;
+}
+
+h2,
+.retro-h2 {
+  font-size: 2.827rem;
+  color: var(--gold-dark);
+}
+
+h3,
+.retro-h3 {
+  font-size: 1.999rem;
+  color: var(--yellow-gold);
+}
+
+h4,
+.retro-h4 {
+  font-size: 1.414rem;
+}
+
+h5,
+.retro-h5 {
+  font-size: 1.121rem;
+}
+
+h6,
+.retro-h6 {
+  font-size: 0.88rem;
+}
+
+p,
+.retro-p {
+  font-size: 1rem;
+  margin-bottom: 1.3rem;
+}
+
+small,
+.retro-small {
+  font-size: 0.707em;
+}
+
+/* Main content */
+.main-content {
+  max-width: 70rem;
+  margin: 2rem;
+  padding: 0.25rem;
+}
+
+code {
+  font-family: "Cascadia Mono", monospace;
+  background-color: var(--code-bg);
+  color: var(--gold);
+  padding: 0.1rem 0.2rem;
+  border-radius: 0.2rem;
+}
+
+pre {
+  font-family: "Cascadia Mono", monospace;
+  background-color: var(--code-bg);
+  color: var(--gold);
+  padding: 0.5rem;
+  line-height: 1.25;
+  border-radius: 0.4rem;
+  overflow-x: auto;
+}
+
+/* Navbar */
+nav {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: "Sometype Mono", monospace;
+  border-bottom: 1px solid #444;
+  background: none;
+}
+
+/* Flex containers */
+.nav-left,
+.nav-right {
+  display: flex;
+  align-items: center;
+}
+
+/* Navigation links */
+nav a {
+  color: var(--yellow-gold);
+  text-decoration: none;
+  margin-left: 1rem;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+nav a:hover {
+  text-decoration: underline;
+  color: var(--gold);
+}
+
+.nav-left a {
+  font-size: 1.5rem;
+  font-weight: bold;
+  font-family: "Caesar Dressing";
+  color: var(--yellow-gold);
+}
+
+blockquote {
+  border-left: 3px solid var(--yellow-gold);
+  padding-left: 1rem;
+  font-family: "Sometype Mono";
+  color: var(--text-main);
+  margin-left: 0;
+}
+
+a,
+a:visited {
+  color: var(--yellow-gold);
+}
+
+a:hover,
+a:focus,
+a:active {
+  color: var(--gold-dark);
+}
+
+@media screen and (min-width: 32rem) and (max-width: 48rem) {
+  html {
+    font-size: 15px;
+  }
+}
+
+@media screen and (min-width: 48rem) {
+  html {
+    font-size: 16px;
+  }
+}
+
+@media print {
+  *,
+  *:before,
+  *:after {
+    background: transparent !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  a[href]:after {
+    content: " (" attr(href) ")";
+  }
+
+  pre,
+  blockquote {
+    border: 1px solid #999;
+    page-break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr,
+  img {
+    page-break-inside: avoid;
+  }
+
+  img {
+    max-width: 100% !important;
+  }
+
+  p,
+  h2,
+  h3 {
+    orphans: 3;
+    widows: 3;
+  }
+
+  h2,
+  h3 {
+    page-break-after: avoid;
+  }
+
+  strong,
+  b {
+    color: var(--yellow-gold);
+    font-weight: bold;
+    transition: all 0.3s ease;
+  }
+
+  strong:hover,
+  b:hover {
+    text-shadow: 0 0 8px rgba(255, 197, 72, 0.6);
+  }
+}
+
+img,
+canvas,
+iframe,
+video,
+svg,
+select,
+textarea {
+  max-width: 100%;
+}
+form {
+  margin: 2rem 0;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Input styling */
+input[type="text"] {
+  background-color: var(--code-bg);
+  color: var(--text-main);
+  border: 2px solid var(--gold-dark);
+  border-radius: 0.4rem;
+  padding: 0.75rem 1rem;
+  font-family: "Sometype Mono", monospace;
+  font-size: 1rem;
+  min-width: 250px;
+  flex: 1;
+  transition: all 0.3s ease;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--yellow-gold);
+  box-shadow: 0 0 10px rgba(255, 197, 72, 0.5), 0 0 20px rgba(255, 197, 72, 0.2);
+}
+
+/* Button styling */
+button[type="submit"] {
+  background: linear-gradient(135deg, var(--yellow-gold), var(--gold-dark));
+  color: var(--bg-dark);
+  border: none;
+  border-radius: 0.4rem;
+  padding: 0.75rem 1.5rem;
+  font-family: "Sometype Mono";
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+button[type="submit"]:hover {
+  background: linear-gradient(135deg, var(--gold-dark), var(--yellow-gold));
+  box-shadow: 0 0 15px rgba(255, 197, 72, 0.233);
+}
