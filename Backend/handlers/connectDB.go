@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -160,5 +161,44 @@ func deleteSessionToken(ctx context.Context, sessionID string) error {
 	}
 
 	fmt.Printf("Deleting session : %s\n", sessionID)
+	return nil
+}
+
+func updateUserLevel(ctx context.Context, sessionID string, level int, pass bool) ( error ) {
+	var currentLevel int
+	var githubID int
+
+	if !pass {
+		return errors.New("incorrect answer") 
+	}
+
+	err := globals.DB.QueryRow(ctx, `
+		SELECT u.current_level, u.github_id FROM users u
+		JOIN sessions s on s.github_id = u.github_id
+		WHERE session_id = $1
+	`, sessionID).Scan(&currentLevel, &githubID)
+
+	if err != nil {
+		log.Printf("Error updating user level %s\n",err.Error())
+		return err
+	}
+
+	if level > currentLevel {
+		return errors.New(fmt.Sprintf("Level %d not completed yet", currentLevel)) 
+	}
+
+	if level == currentLevel {
+		// user passed the currentLevel which he is at
+		// so update current_level in the db
+		_, err := globals.DB.Exec(ctx, `
+			UPDATE users set current_level = $1
+			WHERE github_id = $2
+		`, currentLevel + 1, githubID)
+
+		if err != nil {
+			log.Printf("Error advancing player level %s\n",err.Error())
+			return err
+		}
+	}
 	return nil
 }

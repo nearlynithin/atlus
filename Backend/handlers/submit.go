@@ -2,11 +2,10 @@ package handlers
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
-
-	"github.com/sceptix-club/atlus/Backend/globals"
 )
 
 func SubmitAnswerHandler(w http.ResponseWriter, r *http.Request) {
@@ -55,19 +54,19 @@ func SubmitAnswerHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Correct answer file not found", http.StatusInternalServerError)
 		return
 	}
-	correctAnswer := strings.TrimSpace(string(correctBytes))
+	solution  := strings.TrimSpace(string(correctBytes))
 
 	// Compare answers
-	if answer == correctAnswer {
-		_, err := globals.DB.Exec(ctx,
-			`UPDATE users SET current_level = current_level + 1 WHERE input_id = $1`,
-			sdata.InputID,
-		)
+	if answer == solution {
+		err = updateUserLevel(ctx, sessionID, level, true)
+		
 		if err != nil {
-			http.Error(w, "Failed to update level", http.StatusInternalServerError)
+			log.Println(err.Error())
 			return
 		}
-		fmt.Fprintf(w, "Correct answer! You've progressed to level %d.", sdata.CurrentLevel+1)
+
+		http.Redirect(w, r, fmt.Sprintf("/puzzles/level%d", level+1), http.StatusPermanentRedirect)
+
 	} else {
 		fmt.Fprintf(w, "Incorrect answer. You are still on level %d. Try again!", sdata.CurrentLevel)
 	}
