@@ -21,3 +21,10 @@ CREATE TABLE
         expires_at TIMESTAMP NOT NULL,
         last_activity TIMESTAMP DEFAULT NOW ()
     );
+
+CREATE TABLE
+    IF NOT EXISTS levels (
+        level_id INT PRIMARY KEY,
+        name TEXT NOT NULL,
+        release_time TIMESTAMP NOT NULL
+    );
