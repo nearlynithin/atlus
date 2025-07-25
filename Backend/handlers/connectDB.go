@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 
+	pgx "github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/sceptix-club/atlus/Backend/globals"
@@ -38,7 +39,7 @@ func InitDB() {
 	_, err = pool.Exec(ctx, string(schema))
 	if err != nil {
 		log.Fatalf("Unable to create tables", err)
-	}else {
+	} else {
 		fmt.Println("Tables created successfully")
 	}
 
@@ -55,7 +56,7 @@ func InitDB() {
 
 func addUser(ctx context.Context, user globals.User) error {
 	var inputID int
-	
+
 	err := globals.DB.QueryRow(ctx,
 		`INSERT INTO users (github_id, username, github_url, avatar, email)
 		 VALUES ($1, $2, $3, $4, $5)
@@ -120,7 +121,7 @@ func updateSessionToken(ctx context.Context, githubID int64, newSessionID string
 		INSERT INTO sessions (github_id, session_id, expires_at)
 		VALUES ($1, $2, NOW() + INTERVAL '30 day')
 		ON CONFLICT (github_id)
-		DO UPDATE SET 
+		DO UPDATE SET
 		session_id = EXCLUDED.session_id,
 		expires_at = EXCLUDED.expires_at
 	`, githubID, newSessionID)
@@ -146,9 +147,26 @@ func getSessionData(ctx context.Context, sessionID string) (globals.SessionData,
 		return globals.SessionData{}, err
 	}
 
+	err = globals.DB.QueryRow(ctx, `
+        SELECT level_id FROM levels
+        WHERE release_time > NOW()
+        ORDER BY release_time
+        LIMIT 1;
+        `).Scan(&sdata.NextReleaseLevel)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			// TODO: this is means there is no new level scheduled to release => end of the event, need to handle it later
+			sdata.NextReleaseLevel = 100
+		} else {
+			return globals.SessionData{}, err
+		}
+	}
+
+	fmt.Printf("Next level to be released: %d", sdata.NextReleaseLevel)
+
 	return sdata, nil
 }
-
 
 func deleteSessionToken(ctx context.Context, sessionID string) error {
 	_, err := globals.DB.Exec(ctx, `
@@ -164,12 +182,12 @@ func deleteSessionToken(ctx context.Context, sessionID string) error {
 	return nil
 }
 
-func updateUserLevel(ctx context.Context, sessionID string, level int, pass bool) ( error ) {
+func updateUserLevel(ctx context.Context, sessionID string, level int, pass bool) error {
 	var currentLevel int
 	var githubID int
 
 	if !pass {
-		return errors.New("incorrect answer") 
+		return errors.New("incorrect answer")
 	}
 
 	err := globals.DB.QueryRow(ctx, `
@@ -179,12 +197,12 @@ func updateUserLevel(ctx context.Context, sessionID string, level int, pass bool
 	`, sessionID).Scan(&currentLevel, &githubID)
 
 	if err != nil {
-		log.Printf("Error updating user level %s\n",err.Error())
+		log.Printf("Error updating user level %s\n", err.Error())
 		return err
 	}
 
 	if level > currentLevel {
-		return errors.New(fmt.Sprintf("Level %d not completed yet", currentLevel)) 
+		return errors.New(fmt.Sprintf("Level %d not completed yet", currentLevel))
 	}
 
 	if level == currentLevel {
@@ -193,10 +211,12 @@ func updateUserLevel(ctx context.Context, sessionID string, level int, pass bool
 		_, err := globals.DB.Exec(ctx, `
 			UPDATE users set current_level = $1
 			WHERE github_id = $2
-		`, currentLevel + 1, githubID)
+		`, currentLevel+1, githubID)
+
+		fmt.Printf("LEVEL UPDATED")
 
 		if err != nil {
-			log.Printf("Error advancing player level %s\n",err.Error())
+			log.Printf("Error advancing player level %s\n", err.Error())
 			return err
 		}
 	}

@@ -21,21 +21,26 @@ func InputHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c, err := r.Cookie("session");
-	if  err != nil {
+	c, err := r.Cookie("session")
+	if err != nil {
 		http.Error(w, "session invalid ", http.StatusUnauthorized)
 	}
 
 	slug := r.PathValue("slug")
 	level, err := getLevelParam(slug)
 	if err != nil {
-		http.Error(w,"Invalid url request", http.StatusBadRequest)
+		http.Error(w, "Invalid url request", http.StatusBadRequest)
 		return
 	}
-	
-	sdata , err := getSessionData(ctx, c.Value)
+
+	sdata, err := getSessionData(ctx, c.Value)
 	if err != nil {
 		http.Error(w, "You are not authenticated, please sign in to access the inputs", http.StatusUnauthorized)
+		return
+	}
+
+	if sdata.NextReleaseLevel <= level {
+		http.Error(w, "Level is not released yet!", http.StatusForbidden)
 		return
 	}
 
