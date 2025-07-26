@@ -31,7 +31,7 @@
         <!-- Your existing level list, etc. -->
         {{if .Home}}
         {{if .LoggedIn}}
-        <p>Welcome {{.User}}!</p>
+        <p>Welcome {{.Username}}!</p>
         <ul>
             {{range $i, $ := .Levels}}
             <li><a href="/puzzles/level{{$}}">Level {{$}}</a></li>

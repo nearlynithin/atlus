@@ -21,80 +21,79 @@ type LoginFlow struct {
 	Conf *oauth2.Config
 }
 
-func InitOAuthConfig() *oauth2.Config{
-	
+func InitOAuthConfig() *oauth2.Config {
+
 	var GithubClientID = os.Getenv("GITHUB_CLIENT_ID")
 	var GithubClientSecret = os.Getenv("GITHUB_CLIENT_SECRET")
-	
-	if(len(GithubClientID) == 0 || len(GithubClientSecret) == 0){
+
+	if len(GithubClientID) == 0 || len(GithubClientSecret) == 0 {
 		log.Fatal("client id and secret not initialized")
 	}
-	
+
 	Conf := &oauth2.Config{
-		ClientID: GithubClientID,
+		ClientID:     GithubClientID,
 		ClientSecret: GithubClientSecret,
-		Scopes: []string{"user:email"},
-		Endpoint: github.Endpoint,
-		RedirectURL: "http://"+globals.Hostname+":8000/github/callback/",
+		Scopes:       []string{"user:email"},
+		Endpoint:     github.Endpoint,
+		RedirectURL:  "http://" + globals.Hostname + ":8000/github/callback/",
 	}
-	
+
 	return Conf
 }
 
-func RootHandler(tpl * template.Template) http.HandlerFunc {
-	return func (w http.ResponseWriter, r *http.Request) {
+func RootHandler(tpl *template.Template) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		var sdata globals.SessionData
 
 		var loggedIn bool
-		var user string
 
 		if c, err := r.Cookie("session"); err == nil {
-			user, err = fetchUser(ctx,c.Value)
+			sdata, err = getSessionData(ctx, c.Value)
 			if err != nil {
 				loggedIn = false
-			}else {
-				fmt.Printf("FETCHED USER :",user)
+			} else {
+				fmt.Printf("FETCHED USER: %s:", sdata.Username)
 				loggedIn = true
 			}
 		}
 
-		levels := make([]int, 30)
+		levels := make([]int, sdata.CurrentLevel)
 		for i := range levels {
-  			levels[i] = i + 1
+			levels[i] = i + 1
 		}
 
 		err := tpl.ExecuteTemplate(w, "base", map[string]any{
-		    "Home":     true,
-		    "LoggedIn": loggedIn,
-		    "User":     user,
-		    "Levels":   levels,
+			"Home":     true,
+			"LoggedIn": loggedIn,
+			"Username": sdata.Username,
+			"Levels":   levels,
 		})
-		
+
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}
 }
 
-func (Lf * LoginFlow) GithubLoginHandler(w http.ResponseWriter, r * http.Request){
+func (Lf *LoginFlow) GithubLoginHandler(w http.ResponseWriter, r *http.Request) {
 	state := GenerateSessionID()
 	c := &http.Cookie{
-		Name: "state",
-		Value: state,
-		Path: "/",
-		MaxAge: int(time.Hour.Seconds()),
-		Secure: r.TLS != nil,
+		Name:     "state",
+		Value:    state,
+		Path:     "/",
+		MaxAge:   int(time.Hour.Seconds()),
+		Secure:   r.TLS != nil,
 		HttpOnly: true,
 	}
-	http.SetCookie(w,c)
-	fmt.Printf("State set %s",state)
+	http.SetCookie(w, c)
+	fmt.Printf("State set %s", state)
 
 	redirectURL := Lf.Conf.AuthCodeURL(state, oauth2.AccessTypeOnline)
 	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 }
 
-
-func (Lf * LoginFlow) GithubCallbackHandler(w http.ResponseWriter, r * http.Request){
+func (Lf *LoginFlow) GithubCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	state, err := r.Cookie("state")
@@ -102,7 +101,7 @@ func (Lf * LoginFlow) GithubCallbackHandler(w http.ResponseWriter, r * http.Requ
 		http.Error(w, "state not found", http.StatusBadRequest)
 		return
 	}
-	
+
 	if r.URL.Query().Get("state") != state.Value {
 		http.Error(w, "state did not match", http.StatusBadRequest)
 		return
@@ -110,8 +109,8 @@ func (Lf * LoginFlow) GithubCallbackHandler(w http.ResponseWriter, r * http.Requ
 
 	code := r.URL.Query().Get("code")
 	tok, err := Lf.Conf.Exchange(ctx, code)
-	if err != nil{
-		fmt.Errorf("failed to exchange code: %w",err)
+	if err != nil {
+		fmt.Printf("failed to exchange code: %v", err)
 		return
 	}
 
@@ -126,7 +125,7 @@ func (Lf * LoginFlow) GithubCallbackHandler(w http.ResponseWriter, r * http.Requ
 		githubUser.SessionToken = GenerateSessionID()
 		err = addUser(ctx, githubUser)
 		if err != nil {
-			http.Error(w, "Failed to add user",http.StatusInternalServerError)
+			http.Error(w, "Failed to add user", http.StatusInternalServerError)
 			return
 		}
 	} else {
@@ -141,31 +140,31 @@ func (Lf * LoginFlow) GithubCallbackHandler(w http.ResponseWriter, r * http.Requ
 	}
 
 	stateClear := &http.Cookie{
-		Name: "state",
-		Value: "",
-		Path: "/",
-		MaxAge: -1,
+		Name:     "state",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
 		HttpOnly: true,
 	}
-	http.SetCookie(w,stateClear)
+	http.SetCookie(w, stateClear)
 
 	c := &http.Cookie{
-		Name: "session",
-		Value: githubUser.SessionToken,
-		Path: "/",
-		MaxAge: 60 * 60 * 24 * 30, // 30 days
+		Name:     "session",
+		Value:    githubUser.SessionToken,
+		Path:     "/",
+		MaxAge:   60 * 60 * 24 * 30, // 30 days
 		HttpOnly: true,
 	}
-	http.SetCookie(w,c)
-	http.Redirect(w,r,"/", http.StatusSeeOther)	
+	http.SetCookie(w, c)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func GithubLogoutHandler(w http.ResponseWriter, r* http.Request) {
+func GithubLogoutHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	c, err := r.Cookie("session")
 	if err != nil {
-		log.Printf(err.Error())
-		http.Redirect(w,r,"/", http.StatusSeeOther)	
+		log.Print(err.Error())
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 	sessionID := c.Value
@@ -173,20 +172,20 @@ func GithubLogoutHandler(w http.ResponseWriter, r* http.Request) {
 	err = deleteSessionToken(ctx, sessionID)
 	if err != nil {
 		log.Printf("Unable to delete session")
-		log.Printf(err.Error())
+		log.Print(err.Error())
 	}
 	sessionClear := &http.Cookie{
-		Name: "session",
-		Value: "",
-		Path: "/",
-		MaxAge: -1,
+		Name:     "session",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
 		HttpOnly: true,
 	}
-	http.SetCookie(w,sessionClear)
-	http.Redirect(w,r,"/", http.StatusSeeOther)	
+	http.SetCookie(w, sessionClear)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func GetGithubUserInfo(client  *http.Client) globals.User {
+func GetGithubUserInfo(client *http.Client) globals.User {
 
 	var user globals.User
 	var emails []globals.Email
@@ -206,26 +205,26 @@ func GetGithubUserInfo(client  *http.Client) globals.User {
 
 	emailRes, err := client.Get("https://api.github.com/user/emails")
 	if err != nil {
-		log.Fatal("Failed to get emails ",err)
+		log.Fatal("Failed to get emails ", err)
 	}
 	defer emailRes.Body.Close()
 
 	emailBody, err := io.ReadAll(emailRes.Body)
 	if err != nil {
-		log.Fatal("Failed to read email body ",err)
+		log.Fatal("Failed to read email body ", err)
 	}
 
-	if err:= json.Unmarshal(emailBody, &emails); err != nil {
-		log.Fatal("Failed to parse email list ",err)
+	if err := json.Unmarshal(emailBody, &emails); err != nil {
+		log.Fatal("Failed to parse email list ", err)
 	}
 
-	for _, e:= range emails {
+	for _, e := range emails {
 		if e.Primary && e.Verified {
 			user.Email = e.Email
 			break
 		}
 	}
-	user.SessionToken = GenerateSessionID() 
+	user.SessionToken = GenerateSessionID()
 	return user
 }
 

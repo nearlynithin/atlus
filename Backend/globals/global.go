@@ -25,6 +25,7 @@ type Email struct {
 
 type SessionData struct {
 	GithubID         int64
+	Username         string
 	InputID          int
 	CurrentLevel     int
 	NextReleaseLevel int
