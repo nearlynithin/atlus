@@ -8,7 +8,6 @@ CREATE TABLE
         email TEXT,
         current_level INTEGER DEFAULT 1,
         streak INTEGER DEFAULT 0,
-        last_submission TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW ()
     );
 
@@ -28,3 +27,13 @@ CREATE TABLE
         name TEXT NOT NULL,
         release_time TIMESTAMP NOT NULL
     );
+
+CREATE TABLE
+	IF NOT EXISTS submissions (
+		github_id INT REFERENCES users(github_id),
+		level_id INT REFERENCES levels(level_id),
+		last_submission TIMESTAMP NOT NULL,
+		time_taken INTERVAL ,
+		attempts INT DEFAULT 0,
+		PRIMARY KEY (github_id, level_id)
+	);
