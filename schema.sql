@@ -35,5 +35,6 @@ CREATE TABLE
 		last_submission TIMESTAMP NOT NULL,
 		time_taken INTERVAL ,
 		attempts INT DEFAULT 0,
+		passed BOOLEAN DEFAULT FALSE,
 		PRIMARY KEY (github_id, level_id)
 	);
