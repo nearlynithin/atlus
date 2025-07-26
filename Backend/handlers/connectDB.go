@@ -85,21 +85,6 @@ func addUser(ctx context.Context, user globals.User) error {
 	return nil
 }
 
-func fetchUser(ctx context.Context, sessionID string) (string, error) {
-	var username string
-
-	err := globals.DB.QueryRow(ctx,
-		`SELECT username FROM users
-		JOIN sessions s on s.github_id = users.github_id
-		WHERE s.session_id = $1 AND s.expires_at > NOW()`, sessionID).Scan(&username)
-
-	if err != nil {
-		return "", err
-	}
-
-	return username, nil
-}
-
 func fetchUserByGithubID(ctx context.Context, githubID int64) (globals.User, error) {
 	var user globals.User
 
@@ -107,6 +92,7 @@ func fetchUserByGithubID(ctx context.Context, githubID int64) (globals.User, err
 		SELECT github_id, username, github_url, avatar, email  FROM users where github_id = $1
 	`, githubID).Scan(&user.Github_id, &user.Username, &user.Github_url, &user.Avatar_url, &user.Email)
 	if err != nil {
+		log.Printf("error fetching user by githubID, %v", err)
 		return user, err
 	}
 
@@ -137,12 +123,13 @@ func getSessionData(ctx context.Context, sessionID string) (globals.SessionData,
 	var sdata globals.SessionData
 
 	err := globals.DB.QueryRow(ctx, `
-		SELECT u.github_id, u.input_id, u.current_level FROM users u
+		SELECT u.github_id, u.input_id, u.current_level, u.username FROM users u
 		JOIN sessions s on s.github_id = u.github_id
 		WHERE s.session_id = $1 AND s.expires_at > NOW()
-		`, sessionID).Scan(&sdata.GithubID, &sdata.InputID, &sdata.CurrentLevel)
+		`, sessionID).Scan(&sdata.GithubID, &sdata.InputID, &sdata.CurrentLevel, &sdata.Username)
 
 	if err != nil {
+		log.Printf("error fetching session data, %v", err)
 		return globals.SessionData{}, err
 	}
 
