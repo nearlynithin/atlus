@@ -68,16 +68,23 @@ func SubmitAnswerHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Compare answers
 	if answer == solution {
-		err = updateUserLevel(ctx, sessionID, level, true)
+		err = updateUserLevel(ctx, sdata.GithubID, sdata.CurrentLevel, level, true)
 
 		if err != nil {
 			log.Println(err.Error())
 			return
 		}
 
-		http.Redirect(w, r, fmt.Sprintf("/puzzles/level%d", level+1), http.StatusPermanentRedirect)
+		http.Redirect(w, r, fmt.Sprintf("/puzzles/level%d", level+1), http.StatusSeeOther)
 
 	} else {
+		err = updateUserLevel(ctx, sdata.GithubID, sdata.CurrentLevel, level, false)
+
+		if err != nil {
+			log.Println(err.Error())
+			return
+		}
+
 		fmt.Fprintf(w, "Incorrect answer. You are still on level %d. Try again!", sdata.CurrentLevel)
 	}
 }

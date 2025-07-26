@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -49,7 +48,7 @@ func InitDB() {
 	forkPtr := flag.Bool("dev", false, "DEV MODE : to truncate all db tables, on startup")
 	flag.Parse()
 	if *forkPtr {
-		globals.DB.Exec(ctx, "TRUNCATE table users, sessions;")
+		globals.DB.Exec(ctx, "TRUNCATE table users, sessions, submissions;")
 		fmt.Println("truncated tables users and sessions!")
 	}
 }
@@ -138,10 +137,10 @@ func getSessionData(ctx context.Context, sessionID string) (globals.SessionData,
 	var sdata globals.SessionData
 
 	err := globals.DB.QueryRow(ctx, `
-		SELECT u.input_id, u.current_level FROM users u
+		SELECT u.github_id, u.input_id, u.current_level FROM users u
 		JOIN sessions s on s.github_id = u.github_id
 		WHERE s.session_id = $1 AND s.expires_at > NOW()
-		`, sessionID).Scan(&sdata.InputID, &sdata.CurrentLevel)
+		`, sessionID).Scan(&sdata.GithubID, &sdata.InputID, &sdata.CurrentLevel)
 
 	if err != nil {
 		return globals.SessionData{}, err
@@ -159,6 +158,7 @@ func getSessionData(ctx context.Context, sessionID string) (globals.SessionData,
 			// TODO: this is means there is no new level scheduled to release => end of the event, need to handle it later
 			sdata.NextReleaseLevel = 100
 		} else {
+			fmt.Println("But this happened, so sql.ErrNoRows didn't work")
 			return globals.SessionData{}, err
 		}
 	}
@@ -182,27 +182,14 @@ func deleteSessionToken(ctx context.Context, sessionID string) error {
 	return nil
 }
 
-func updateUserLevel(ctx context.Context, sessionID string, level int, pass bool) error {
-	var currentLevel int
-	var githubID int
+func updateUserLevel(ctx context.Context, githubID int64, currentLevel int, level int, pass bool) error {
 
 	if !pass {
-		return errors.New("incorrect answer")
-	}
-
-	err := globals.DB.QueryRow(ctx, `
-		SELECT u.current_level, u.github_id FROM users u
-		JOIN sessions s on s.github_id = u.github_id
-		WHERE session_id = $1
-	`, sessionID).Scan(&currentLevel, &githubID)
-
-	if err != nil {
-		log.Printf("Error updating user level %s\n", err.Error())
-		return err
+		return updateSubmission(ctx, githubID, level, pass)
 	}
 
 	if level > currentLevel {
-		return errors.New(fmt.Sprintf("Level %d not completed yet", currentLevel))
+		return fmt.Errorf("Level %d not completed yet", currentLevel)
 	}
 
 	if level == currentLevel {
@@ -219,6 +206,47 @@ func updateUserLevel(ctx context.Context, sessionID string, level int, pass bool
 			log.Printf("Error advancing player level %s\n", err.Error())
 			return err
 		}
+		updateSubmission(ctx, githubID, level, pass)
 	}
+	return nil
+}
+
+func updateSubmission(ctx context.Context, githubID int64, level int, pass bool) error {
+	_, err := globals.DB.Exec(ctx, `
+            INSERT INTO submissions (github_id, level_id, last_submission, attempts)
+            VALUES ($1, $2, NOW(), 1)
+            ON CONFLICT (github_id, level_id)
+            DO UPDATE SET
+                last_submission = NOW(),
+                attempts = submissions.attempts + 1
+        `, githubID, level)
+
+	if err != nil {
+		return fmt.Errorf("Error inserting/updating submission for the user %d, %v", githubID, err)
+	}
+
+	if pass {
+		result, err := globals.DB.Exec(ctx, `
+		UPDATE submissions s
+		SET time_taken = s.last_submission - l.release_time
+		FROM levels l
+		WHERE s.github_id = $1
+		AND s.level_id = $2
+		AND s.time_taken IS NULL
+		AND s.level_id = l.level_id
+	`, githubID, level)
+
+		if err != nil {
+			return fmt.Errorf("Error updating time_taken: %v", err)
+		}
+
+		rowsAffected := result.RowsAffected()
+
+		if rowsAffected == 0 {
+			log.Printf("User %d already has time_taken set for level %d — no update needed.\n", githubID, level)
+			return nil
+		}
+	}
+
 	return nil
 }
