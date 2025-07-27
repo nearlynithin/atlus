@@ -1,0 +1,8 @@
+{{block "leaderboard-table" .}}
+<div id="leaderboard-box" hx-get="/leaderboard/live" hx-swap="innerHTML" hx-trigger="every 5s">
+    <div class="htmx-indicator">Loading...</div>
+    <ul>
+        <li>{{.Entries}}</li>
+    </ul>
+</div>
+{{end}}

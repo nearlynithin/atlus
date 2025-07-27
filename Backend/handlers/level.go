@@ -70,7 +70,7 @@ func LevelHandler(tpl *template.Template) http.HandlerFunc {
 			"Level":    true,
 			"LoggedIn": loggedIn,
 			"Slug":     newSlug,
-			"Content":  template.HTML(buf.String()),
+			"Puzzle":   template.HTML(buf.String()),
 		})
 	}
 }

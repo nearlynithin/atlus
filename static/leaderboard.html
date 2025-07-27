@@ -4,6 +4,9 @@
 
 {{define "leaderboardContent"}}
 {{if .Leaderboard}}
-<h2>Yoo its the leaderboard right here!</h2>
+<h2>Leaderboard</h2>
+<div id="leaderboard-container" hx-get="/leaderboard/live" hx-swap="innerHTML" hx-trigger="load, every 5s">
+    <div class="htmx-indicator">Loading leaderboard...</div>
+</div>
 {{end}}
 {{end}}

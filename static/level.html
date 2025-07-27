@@ -4,7 +4,7 @@
 
 {{define "levelContent"}}
 {{if .Level}}
-<p>{{.Content}}</p>
+<p>{{.Puzzle}}</p>
 {{if .Slug}}
 <form action="/submitAnswer/{{.Slug}}" method="POST">
     <input type="text" name="answer" required>
