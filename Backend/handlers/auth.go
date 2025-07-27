@@ -53,7 +53,7 @@ func RootHandler(tpl *template.Template) http.HandlerFunc {
 			if err != nil {
 				loggedIn = false
 			} else {
-				fmt.Printf("FETCHED USER: %s:", sdata.Username)
+				fmt.Printf("\nFETCHED USER: %s\n", sdata.Username)
 				loggedIn = true
 			}
 		}
