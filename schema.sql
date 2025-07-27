@@ -31,6 +31,7 @@ CREATE TABLE
 CREATE TABLE
 	IF NOT EXISTS submissions (
 		github_id INT REFERENCES users(github_id),
+        username TEXT NOT NULL,
 		level_id INT REFERENCES levels(level_id),
 		last_submission TIMESTAMP NOT NULL,
 		time_taken INTERVAL ,

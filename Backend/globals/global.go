@@ -31,4 +31,12 @@ type SessionData struct {
 	NextReleaseLevel int
 }
 
+type SubmissionData struct {
+	GithubID     int64
+	Username     string
+	CurrentLevel int
+	PuzzleLevel  int
+	Pass         bool
+}
+
 var DB *pgxpool.Pool
