@@ -1,8 +1,29 @@
 {{block "leaderboard-table" .}}
-<div id="leaderboard-box" hx-get="/leaderboard/live" hx-swap="innerHTML" hx-trigger="every 5s">
-    <div class="htmx-indicator">Loading...</div>
+<div class="leaderboard-box">
     <ul>
-        <li>{{.Entries}}</li>
+        {{if .StreakRune}}
+        {{range .StreakRune}}
+       <li>{{.Username}} | {{.Streak}} | {{.GithubUrl}}</li>
+        {{else}}
+        Loading ...
+        {{end}}
+        {{end}}
+
+        {{if .FlashRune}}
+        {{range .FlashRune}}
+        <li>{{.LevelId}} | {{.Username}} | {{.TimeTaken}}</li>
+        {{else}}
+        Loading ...
+        {{end}}
+        {{end}}
+
+        {{if .ChampionRune}}
+        {{range .ChampionRune}}
+        <li>{{.Username}} | {{.CurrentLevel}} | {{.GithubUrl}}</li>
+        {{else}}
+        Loading ...
+        {{end}}
+        {{end}}
     </ul>
 </div>
 {{end}}
