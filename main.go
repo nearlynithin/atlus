@@ -36,7 +36,7 @@ func main() {
 	mux.HandleFunc("/inputs/{slug}", handlers.InputHandler)
 	mux.HandleFunc("/submitAnswer/{slug}", handlers.SubmitAnswerHandler)
 	mux.HandleFunc("/leaderboard/", handlers.LeaderboardHandler(tpl))
-	mux.HandleFunc("/leaderboard/live", handlers.LeaderboardLiveHandler(tpl))
+	mux.HandleFunc("/leaderboard/live/{slug}", handlers.LeaderboardLiveHandler(tpl))
 
 	fmt.Printf("Listening on %s%s ...\n", globals.Hostname, globals.Port)
 	log.Panic(http.ListenAndServe(":"+globals.Port, mux))
