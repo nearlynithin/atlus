@@ -6,9 +6,20 @@
 {{if .Level}}
 <p>{{.Puzzle}}</p>
 {{if .Slug}}
-<form action="/submitAnswer/{{.Slug}}" method="POST">
-    <input type="text" name="answer" required>
-    <button type="submit">Submit</button>
+<form action="/submitAnswer/{{.Slug}}" method="POST" class="mt-4 flex gap-2">
+    <input
+        type="text"
+        name="answer"
+        required
+        placeholder="Enter your answer..."
+        class="bg-[#1a140f] text-white border border-yellow-500 px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 w-full font-mono"
+    >
+    <button
+        type="submit"
+        class="bg-yellow-500 hover:bg-yellow-400 text-black px-4 py-2 rounded-md font-bold transition-colors duration-200"
+    >
+        Submit
+    </button>
 </form>
 {{end}}
 {{end}}

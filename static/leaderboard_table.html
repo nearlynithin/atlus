@@ -1,29 +1,101 @@
 {{block "leaderboard-table" .}}
-<div class="leaderboard-box">
-    <ul>
-        {{if .StreakRune}}
-        {{range .StreakRune}}
-       <li>{{.Username}} | {{.Streak}} | {{.GithubUrl}}</li>
-        {{else}}
-        Loading ...
-        {{end}}
-        {{end}}
+<div class="leaderboard-box mt-10 mb-16 overflow-x-auto px-2">
+    {{if .StreakRune}}
+    <div class="mb-8">
+        <h2 class="text-yellow-300 text-lg font-semibold mb-4">Streak Leaderboard</h2>
+        <div class="bg-zinc-900 rounded-xl overflow-hidden shadow-lg ring-1 ring-yellow-300/50">
+            <table class="min-w-full text-sm">
+                <thead class="bg-yellow-500/70 text-gray-100 font-semibold">
+                    <tr>
+                        <th class="px-6 py-3 text-left">Username</th>
+                        <th class="px-6 py-3 text-left">Streak</th>
+                        <th class="px-6 py-3 text-left">GitHub</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-yellow-200/20">
+                    {{range .StreakRune}}
+                    <tr class="hover:bg-yellow-100/10 transition-colors duration-200">
+                        <td class="px-6 py-4 text-white">{{.Username}}</td>
+                        <td class="px-6 py-4 text-yellow-300 font-medium">{{.Streak}}</td>
+                        <td class="px-6 py-4">
+                            <a href="{{.GithubUrl}}" class="text-yellow-200 hover:text-yellow-100 hover:underline transition-colors" target="_blank" rel="noopener noreferrer">
+                                {{.GithubUrl}}
+                            </a>
+                        </td>
+                    </tr>
+                    {{else}}
+                    <tr>
+                        <td colspan="3" class="px-6 py-8 text-zinc-400 text-center">Loading...</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {{end}}
 
-        {{if .FlashRune}}
-        {{range .FlashRune}}
-        <li>{{.LevelId}} | {{.Username}} | {{.TimeTaken}}</li>
-        {{else}}
-        Loading ...
-        {{end}}
-        {{end}}
+    {{if .FlashRune}}
+    <div class="mb-8">
+        <h2 class="text-yellow-300 text-lg font-semibold mb-4">Fastest Submissions</h2>
+        <div class="bg-zinc-900 rounded-xl overflow-hidden shadow-lg ring-1 ring-yellow-300/50">
+            <table class="min-w-full text-sm">
+                <thead class="bg-yellow-500/70 text-gray-100 font-semibold">
+                    <tr>
+                        <th class="px-6 py-3 text-left">Level</th>
+                        <th class="px-6 py-3 text-left">Username</th>
+                        <th class="px-6 py-3 text-left">Time</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-yellow-200/20">
+                    {{range .FlashRune}}
+                    <tr class="hover:bg-yellow-100/10 transition-colors duration-200">
+                        <td class="px-6 py-4 text-yellow-300 font-medium">{{.LevelId}}</td>
+                        <td class="px-6 py-4 text-white">{{.Username}}</td>
+                        <td class="px-6 py-4 text-green-400 font-mono">{{.TimeTaken}}</td>
+                    </tr>
+                    {{else}}
+                    <tr>
+                        <td colspan="3" class="px-6 py-8 text-zinc-400 text-center">Loading...</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {{end}}
 
-        {{if .ChampionRune}}
-        {{range .ChampionRune}}
-        <li>{{.Username}} | {{.CurrentLevel}} | {{.GithubUrl}}</li>
-        {{else}}
-        Loading ...
-        {{end}}
-        {{end}}
-    </ul>
+    {{if .ChampionRune}}
+    <div class="mb-8">
+        <h2 class="text-yellow-300 text-lg font-semibold mb-4">Champions</h2>
+        <div class="bg-zinc-900 rounded-xl overflow-hidden shadow-lg ring-1 ring-yellow-300/50">
+            <table class="min-w-full text-sm">
+                <thead class="bg-yellow-500/70 text-gray-100 font-semibold">
+                    <tr>
+                        <th class="px-6 py-3 text-left">Username</th>
+                        <th class="px-6 py-3 text-left">Current Level</th>
+                        <th class="px-6 py-3 text-left">GitHub</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-yellow-200/20">
+                    {{range .ChampionRune}}
+                    <tr class="hover:bg-yellow-100/10 transition-colors duration-200">
+                        <td class="px-6 py-4 text-white">{{.Username}}</td>
+                        <td class="px-6 py-4 text-yellow-300 font-medium">{{.CurrentLevel}}</td>
+                        <td class="px-6 py-4">
+                            <a href="{{.GithubUrl}}" class="text-yellow-200 hover:text-yellow-100 hover:underline transition-colors" target="_blank" rel="noopener noreferrer">
+                                {{.GithubUrl}}
+                            </a>
+                        </td>
+                    </tr>
+                    {{else}}
+                    <tr>
+                        <td colspan="3" class="px-6 py-8 text-zinc-400 text-center">Loading...</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {{end}}
 </div>
 {{end}}

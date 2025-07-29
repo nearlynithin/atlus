@@ -1,6 +1,6 @@
 {{define "base"}}
 <!DOCTYPE html>
-<html>
+<html class="bg-[#0a0706] text-[#fafafa] font-mono">
 
 <head>
     <title>Atlus</title>
@@ -9,46 +9,72 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Caesar+Dressing&family=Cascadia+Mono:ital,wght@0,200..700;1,200..700&family=Sometype+Mono&display=swap"
         rel="stylesheet">
+
     <link href="/static/retro.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        mono: ['"Sometype Mono"', 'monospace'],
+                        heading: ['"Caesar Dressing"', 'cursive'],
+                    },
+                    colors: {
+                        gold: '#ffe9ba',
+                        yellowgold: '#ffc548',
+                        golddark: '#ecc67e',
+                        bgdark: '#0a0706',
+                        codebg: '#1a140f',
+                        textmain: '#fafafa',
+                    },
+                }
+            }
+        }
+    </script>
 </head>
 
-<body>
-    <nav>
-        <div class="nav-left">
-            <a href="/">Atlus</a>
+<body class="min-h-screen flex flex-col items-center px-4">
+
+    <nav class="w-full border-b border-[#444] font-mono px-4 flex justify-between items-center py-4">
+        <div class="text-2xl font-heading text-yellowgold">
+            <a href="/" class="hover:text-gold transition">Atlus</a>
         </div>
-        <div class="nav-right">
+        <div class="flex gap-4 text-yellowgold">
             {{if .LoggedIn}}
-            <a href="/leaderboard">Leaderboard</a>
-            <a href="/logout/">Logout</a>
+            <a href="/leaderboard" class="hover:underline hover:text-gold">Leaderboard</a>
+            <a href="/logout/" class="hover:underline hover:text-gold">Logout</a>
             {{else}}
-            <a href="/login/">Login</a>
+            <a href="/login/" class="hover:underline hover:text-gold">Login</a>
             {{end}}
         </div>
     </nav>
 
-    <div class="main-content">
-        <!-- Your existing level list, etc. -->
+    <main class="w-full max-w-5xl mt-8">
         {{if .Home}}
         {{if .LoggedIn}}
-        <p>Welcome {{.Username}}!</p>
-        <ul>
+        <p class="text-lg">Welcome <span class="text-yellowgold">{{.Username}}</span>!</p>
+        <ul class="list-disc pl-6 space-y-1 mt-4">
             {{range $i, $ := .Levels}}
-            <li><a href="/puzzles/level{{$}}">Level {{$}}</a></li>
+            <li><a href="/puzzles/level{{$}}" class="text-gold hover:underline">Level {{$}}</a></li>
             {{end}}
         </ul>
         {{else}}
-        <p>You need to log in through Github to continue</p>
-        <a href="/login/">Click here to login with Github</a>
+        <p class="mb-4">You need to log in through Github to continue</p>
+        <a href="/login/" class="inline-block bg-yellowgold text-bgdark px-4 py-2 rounded hover:bg-golddark font-semibold">
+            Click here to login with Github
+        </a>
         {{end}}
         {{end}}
 
+        <div class="levelContent">
         {{block "levelContent" .}}{{end}}
+        </div>
         {{block "leaderboardContent" .}}{{end}}
-    </div>
+    </main>
+
 </body>
-
-
 </html>
 {{end}}

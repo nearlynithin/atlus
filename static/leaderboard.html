@@ -4,28 +4,27 @@
 
 {{define "leaderboardContent"}}
 {{if .Leaderboard}}
-<h2>Leaderboard: Streak</h2>
-<div id="streak-leaderboard"
-     hx-get="/leaderboard/live/streak"
-     hx-swap="innerHTML"
-     hx-trigger="load, every 3s">
-    <div class="htmx-indicator">Loading...</div>
-</div>
+<div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div id="streak-leaderboard"
+         hx-get="/leaderboard/live/streak"
+         hx-swap="innerHTML"
+         hx-trigger="load, every 3s">
+        <div class="htmx-indicator">Loading...</div>
+    </div>
 
-<h2>Leaderboard: Flash</h2>
-<div id="flash-leaderboard"
-     hx-get="/leaderboard/live/flash"
-     hx-swap="innerHTML"
-     hx-trigger="load, every 5s">
-    <div class="htmx-indicator">Loading...</div>
-</div>
+    <div id="flash-leaderboard"
+         hx-get="/leaderboard/live/flash"
+         hx-swap="innerHTML"
+         hx-trigger="load, every 5s">
+        <div class="htmx-indicator">Loading...</div>
+    </div>
 
-<h2>Leaderboard: Streak</h2>
-<div id="streak-leaderboard"
-     hx-get="/leaderboard/live/champion"
-     hx-swap="innerHTML"
-     hx-trigger="load, every 3s">
-    <div class="htmx-indicator">Loading...</div>
+    <div id="champion-leaderboard"
+         hx-get="/leaderboard/live/champion"
+         hx-swap="innerHTML"
+         hx-trigger="load, every 3s">
+        <div class="htmx-indicator">Loading...</div>
+    </div>
 </div>
 {{end}}
 {{end}}
