@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/sceptix-club/atlus/Backend/globals"
 )
@@ -107,8 +108,8 @@ func flashHandler(ctx context.Context) (map[string]any, error) {
 
 	type Record struct {
 		LevelId   string
-		Username  int
-		TimeTaken int
+		Username  string
+		TimeTaken time.Duration
 	}
 
 	var data []Record
@@ -154,7 +155,7 @@ func championHandler(ctx context.Context) (map[string]any, error) {
 	type Record struct {
 		Username     string
 		CurrentLevel int
-		GithubUrl    int
+		GithubUrl    string
 	}
 
 	var data []Record
