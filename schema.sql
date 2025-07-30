@@ -35,6 +35,7 @@ CREATE TABLE
 		level_id INT REFERENCES levels(level_id),
 		last_submission TIMESTAMP NOT NULL,
 		time_taken INTERVAL ,
+		cooldown TIMESTAMP DEFAULT NOW(),
 		attempts INT DEFAULT 0,
 		passed BOOLEAN DEFAULT FALSE,
 		PRIMARY KEY (github_id, level_id)

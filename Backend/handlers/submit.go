@@ -7,9 +7,21 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	pgx "github.com/jackc/pgx/v5"
 	"github.com/sceptix-club/atlus/Backend/globals"
+)
+
+type SubmissionStatus string
+
+const (
+	AlreadyPassed   SubmissionStatus = "already_passed"
+	LevelIncomplete SubmissionStatus = "level_incomplete"
+	LevelPassed     SubmissionStatus = "level_passed"
+	LevelFailed     SubmissionStatus = "level_failed"
+	Cooldown        SubmissionStatus = "cooldown"
+	SubmissionError SubmissionStatus = "submission_error"
 )
 
 func SubmitAnswerHandler(w http.ResponseWriter, r *http.Request) {
@@ -79,94 +91,124 @@ func SubmitAnswerHandler(w http.ResponseWriter, r *http.Request) {
 	// Compare answers
 	if answer == solution {
 		submissionData.Pass = true
-		err = updateUserLevel(ctx, submissionData)
-
-		if err != nil {
-			log.Println(err.Error())
-			return
-		}
-
-		http.Redirect(w, r, fmt.Sprintf("/puzzles/level%d", level+1), http.StatusSeeOther)
-
 	} else {
 		submissionData.Pass = false
-		err = updateUserLevel(ctx, submissionData)
-
-		if err != nil {
-			log.Println(err.Error())
+	}
+	status, err := updateUserAttempt(ctx, submissionData)
+	if err != nil {
+		log.Printf("unknown error: %v", err)
+		fmt.Fprintf(w, "an error occured, please try again.")
+		return
+	} else {
+		switch status {
+		case Cooldown:
+			fmt.Fprint(w, "You're on cooldown! Try again later")
+			return
+		case AlreadyPassed:
+			http.Redirect(w, r, fmt.Sprintf("/puzzles/level%d", submissionData.CurrentLevel), http.StatusSeeOther)
+			return
+		case LevelPassed:
+			// handle a level passed page here
+			http.Redirect(w, r, fmt.Sprintf("/puzzles/level%d", level+1), http.StatusSeeOther)
+			return
+		case LevelFailed:
+			// handle a level failed page here
+			fmt.Fprint(w, "Incorrect answer, please try again.")
+			return
+		default:
+			log.Printf("unknown error: %v", err)
+			fmt.Fprintf(w, "an error occured, please try again.")
 			return
 		}
-
-		fmt.Fprintf(w, "Incorrect answer. You are still on level %d. Try again!", sdata.CurrentLevel)
 	}
 }
 
-func updateUserLevel(ctx context.Context, submissionData globals.SubmissionData) error {
-
-	if !submissionData.Pass {
-		return updateSubmission(ctx, submissionData)
+func updateUserAttempt(ctx context.Context, submissionData globals.SubmissionData) (SubmissionStatus, error) {
+	tx, err := globals.DB.Begin(ctx)
+	if err != nil {
+		return SubmissionError, fmt.Errorf("failed to begin transaction: %v", err)
 	}
+	defer tx.Rollback(ctx)
 
-	if submissionData.PuzzleLevel > submissionData.CurrentLevel {
-		return fmt.Errorf("Level %d not completed yet", submissionData.CurrentLevel)
-	}
-
-	if submissionData.PuzzleLevel == submissionData.CurrentLevel {
-		// user passed the currentLevel which he is at
-		// so update current_level in the db
-		_, err := globals.DB.Exec(ctx, `
-			UPDATE users set current_level = $1
+	if submissionData.Pass {
+		if submissionData.PuzzleLevel > submissionData.CurrentLevel {
+			return LevelIncomplete, fmt.Errorf("Level %d not completed yet", submissionData.CurrentLevel)
+		}
+		if submissionData.PuzzleLevel == submissionData.CurrentLevel {
+			// user passed the currentLevel which he is at
+			// so update current_level in the db
+			_, err := tx.Exec(ctx, `
+			UPDATE users SET
+			current_level = $1
 			WHERE github_id = $2
 		`, submissionData.CurrentLevel+1, submissionData.GithubID)
 
-		fmt.Printf("LEVEL UPDATED")
-
-		if err != nil {
-			log.Printf("Error advancing player level %s\n", err.Error())
-			return err
+			if err != nil {
+				return SubmissionError, fmt.Errorf("error advancing user level : %v", err)
+			}
+			log.Printf("Advanced user %s to level %d", submissionData.Username, submissionData.CurrentLevel+1)
 		}
-		updateSubmission(ctx, submissionData)
+		return submissionTx(ctx, tx, submissionData)
+	} else {
+		return submissionTx(ctx, tx, submissionData)
 	}
-	return nil
 }
 
-func updateSubmission(ctx context.Context, submissionData globals.SubmissionData) error {
-	var attempts int
+func submissionTx(ctx context.Context, tx pgx.Tx, submissionData globals.SubmissionData) (SubmissionStatus, error) {
 
-	err := globals.DB.QueryRow(ctx, `
+	var existingAttempts int
+	var hasPassed bool
+	var cooldownEnd time.Time
+
+	err := tx.QueryRow(ctx, `
+        SELECT COALESCE(attempts, 0), COALESCE(passed, FALSE), COALESCE(cooldown, NOW())
+        FROM submissions
+        WHERE github_id = $1 AND level_id = $2
+        `, submissionData.GithubID, submissionData.PuzzleLevel).Scan(&existingAttempts, &hasPassed, &cooldownEnd)
+
+	if err != nil && err != pgx.ErrNoRows {
+		return SubmissionError, fmt.Errorf("Error checking existing submission: %v", err)
+	}
+
+	if hasPassed {
+		return AlreadyPassed, nil
+	}
+
+	// cooldown not complete yet
+	if time.Now().Before(cooldownEnd) {
+		return Cooldown, nil
+	}
+
+	var newAttempts int
+	err = tx.QueryRow(ctx, `
             INSERT INTO submissions (github_id, username, level_id, last_submission, attempts)
             VALUES ($1, $2, $3, NOW(), 1)
             ON CONFLICT (github_id, level_id)
             DO UPDATE SET
                 last_submission = NOW(),
                 attempts = submissions.attempts + 1
-                WHERE submissions.passed = FALSE
-            RETURNING attempts;
-        `, submissionData.GithubID, submissionData.Username, submissionData.PuzzleLevel).Scan(&attempts)
-
+            RETURNING attempts
+        `, submissionData.GithubID, submissionData.Username, submissionData.PuzzleLevel).Scan(&newAttempts)
 	if err != nil {
-		fmt.Printf("error inserting into submissions, %v", err)
-		if err == pgx.ErrNoRows {
-			fmt.Printf("level is already passed")
-			return nil
+		return SubmissionError, fmt.Errorf("error inserting/updating submission: %v", err)
+	}
+
+	if newAttempts%3 == 0 {
+		cooldownMinutes := (newAttempts / 3) * 15
+		cooldownDuration := fmt.Sprintf("%d minutes", int(cooldownMinutes))
+
+		_, err := tx.Exec(ctx, `
+            UPDATE submissions SET
+            cooldown = NOW() + $1
+            WHERE github_id = $2 AND level_id = $3
+            `, cooldownDuration, submissionData.GithubID, submissionData.PuzzleLevel)
+		if err != nil {
+			return SubmissionError, fmt.Errorf("error setting cooldown, %v", err)
 		}
-		return fmt.Errorf("Error inserting/updating submission for the user %s, %v", submissionData.Username, err)
 	}
 
 	if submissionData.Pass {
-		// couting a streak if attempts = 1 and the user passed the level
-		if attempts == 1 {
-			_, err := globals.DB.Exec(ctx, `
-                UPDATE users SET
-                streak = streak + 1
-                WHERE github_id = $1
-                `, submissionData.GithubID)
-			if err != nil {
-				return fmt.Errorf("errror updating streak %v", err)
-			}
-		}
-
-		result, err := globals.DB.Exec(ctx, `
+		_, err := tx.Exec(ctx, `
 		UPDATE submissions AS s
 		SET time_taken = s.last_submission - l.release_time,
 		passed = TRUE
@@ -178,26 +220,37 @@ func updateSubmission(ctx context.Context, submissionData globals.SubmissionData
 	`, submissionData.GithubID, submissionData.PuzzleLevel)
 
 		if err != nil {
-			return fmt.Errorf("Error updating time_taken: %v", err)
+			return SubmissionError, fmt.Errorf("error updating submission as passed, %v", err)
 		}
 
-		rowsAffected := result.RowsAffected()
-
-		if rowsAffected == 0 {
-			log.Printf("User %s already has time_taken set for level %d — no update needed.\n", submissionData.Username, submissionData.PuzzleLevel)
-			return nil
-		}
-	} else if attempts == 1 {
-		// user had failed on first attempt, set the streak to zero
-		_, err := globals.DB.Exec(ctx, `
+		if newAttempts == 1 {
+			_, err := tx.Exec(ctx, `
                 UPDATE users SET
-                streak = 1
+                streak = streak + 1
+                WHERE github_id = $1 `, submissionData.GithubID)
+			if err != nil {
+				return SubmissionError, fmt.Errorf("errror updating streak %v", err)
+			}
+		}
+		err = tx.Commit(ctx)
+		if err != nil {
+			return SubmissionError, fmt.Errorf("failed to commit transaction: %v", err)
+		}
+		return LevelPassed, nil
+	} else {
+		// user had failed on first attempt, set the streak to zero
+		_, err := tx.Exec(ctx, `
+                UPDATE users SET
+                streak = 0
                 WHERE github_id = $1
                 `, submissionData.GithubID)
 		if err != nil {
-			return fmt.Errorf("Error setting streak to zero : %v", err)
+			return SubmissionError, fmt.Errorf("Error setting streak : %v", err)
 		}
+		err = tx.Commit(ctx)
+		if err != nil {
+			return SubmissionError, fmt.Errorf("failed to commit transaction: %v", err)
+		}
+		return LevelFailed, nil
 	}
-
-	return nil
 }
