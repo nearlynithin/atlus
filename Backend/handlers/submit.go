@@ -175,7 +175,7 @@ func submissionTx(ctx context.Context, tx pgx.Tx, submissionData globals.Submiss
 	}
 
 	// cooldown not complete yet
-	if time.Now().Before(cooldownEnd) {
+	if time.Now().UTC().Before(cooldownEnd) {
 		return Cooldown, nil
 	}
 
@@ -195,7 +195,7 @@ func submissionTx(ctx context.Context, tx pgx.Tx, submissionData globals.Submiss
 
 	if newAttempts%3 == 0 {
 		cooldownMinutes := (newAttempts / 3) * 15
-		cooldownDuration := fmt.Sprintf("%d minutes", int(cooldownMinutes))
+		cooldownDuration := fmt.Sprintf("%d seconds", int(cooldownMinutes))
 
 		_, err := tx.Exec(ctx, `
             UPDATE submissions SET
