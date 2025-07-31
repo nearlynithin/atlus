@@ -142,10 +142,12 @@ func getSessionData(ctx context.Context, sessionID string) (globals.SessionData,
 	var sdata globals.SessionData
 
 	err := globals.DB.QueryRow(ctx, `
-		SELECT u.github_id, u.input_id, u.current_level, u.username FROM users u
+		SELECT u.github_id, u.input_id, u.current_level, u.username, u.github_url, u.avatar, u.email, u.streak, u.created_at
+		FROM users u
 		JOIN sessions s on s.github_id = u.github_id
 		WHERE s.session_id = $1 AND s.expires_at > NOW()
-		`, sessionID).Scan(&sdata.GithubID, &sdata.InputID, &sdata.CurrentLevel, &sdata.Username)
+		`, sessionID).Scan(&sdata.GithubID, &sdata.InputID, &sdata.CurrentLevel, &sdata.Username,
+		&sdata.GithubUrl, &sdata.Avatar, &sdata.Email, &sdata.Streak, &sdata.CreatedAt)
 
 	if err != nil {
 		log.Printf("error fetching session data, %v", err)
@@ -168,9 +170,6 @@ func getSessionData(ctx context.Context, sessionID string) (globals.SessionData,
 			return globals.SessionData{}, err
 		}
 	}
-
-	fmt.Printf("\nNext level to be released: %d\n", sdata.NextReleaseLevel)
-
 	return sdata, nil
 }
 

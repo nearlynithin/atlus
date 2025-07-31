@@ -1,6 +1,8 @@
 package globals
 
 import (
+	"time"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -25,10 +27,15 @@ type Email struct {
 
 type SessionData struct {
 	GithubID         int64
+	GithubUrl        string
 	Username         string
+	Avatar           string
+	Email            string
 	InputID          int
 	CurrentLevel     int
+	Streak           int
 	NextReleaseLevel int
+	CreatedAt        time.Time
 }
 
 type SubmissionData struct {
