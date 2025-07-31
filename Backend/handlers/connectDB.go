@@ -73,9 +73,15 @@ func InitDB() {
 }
 
 func addUser(ctx context.Context, user globals.User) error {
+	tx, err := globals.DB.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("Error creating a transaction for adding user, %v", err)
+	}
+	defer tx.Rollback(ctx)
+
 	var inputID int
 
-	err := globals.DB.QueryRow(ctx,
+	err = tx.QueryRow(ctx,
 		`INSERT INTO users (github_id, username, github_url, avatar, email)
 		 VALUES ($1, $2, $3, $4, $5)
 		 ON CONFLICT (github_id) DO UPDATE SET
@@ -92,7 +98,7 @@ func addUser(ctx context.Context, user globals.User) error {
 		return err
 	}
 
-	_, err = globals.DB.Exec(ctx,
+	_, err = tx.Exec(ctx,
 		`INSERT INTO sessions (session_id, github_id, input_id, expires_at)
 		 VALUES ($1, $2, $3, NOW() + INTERVAL '30 day')`,
 		user.SessionToken, user.Github_id, inputID,
@@ -100,6 +106,11 @@ func addUser(ctx context.Context, user globals.User) error {
 	if err != nil {
 		fmt.Printf("Error adding session: %s", err)
 		return err
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("Error commiting a transaction on sessions, %v", err)
 	}
 	return nil
 }
