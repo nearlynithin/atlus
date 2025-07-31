@@ -34,7 +34,7 @@ func main() {
 	mux.HandleFunc("/github/callback/", lf.GithubCallbackHandler)
 	mux.HandleFunc("/puzzles/{slug}", handlers.LevelHandler(tpl))
 	mux.HandleFunc("/inputs/{slug}", handlers.InputHandler)
-	mux.HandleFunc("/submitAnswer/{slug}", handlers.SubmitAnswerHandler)
+	mux.HandleFunc("/submitAnswer/{slug}", handlers.SubmitAnswerHandler(tpl))
 	mux.HandleFunc("/leaderboard/", handlers.LeaderboardHandler(tpl))
 	mux.HandleFunc("/leaderboard/live/{slug}", handlers.LeaderboardLiveHandler(tpl))
 	mux.HandleFunc("/profile", handlers.ProfileHandler(tpl))

@@ -45,6 +45,7 @@
         <div class="flex gap-4 text-yellowgold">
             {{if .LoggedIn}}
             <a href="/leaderboard" class="hover:underline hover:text-gold">Leaderboard</a>
+            <a href="/profile" class="hover:underline hover:text-gold">Profile</a>
             <a href="/logout/" class="hover:underline hover:text-gold">Logout</a>
             {{else}}
             <a href="/login/" class="hover:underline hover:text-gold">Login</a>
@@ -74,6 +75,7 @@
         </div>
         {{block "leaderboardContent" .}}{{end}}
         {{block "profile" .}}{{end}}
+        {{block "answer" .}}{{end}}
     </main>
 
 </body>

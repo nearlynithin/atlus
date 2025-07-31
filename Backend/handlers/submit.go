@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -24,101 +25,113 @@ const (
 	SubmissionError SubmissionStatus = "submission_error"
 )
 
-func SubmitAnswerHandler(w http.ResponseWriter, r *http.Request) {
-	// Only allow POST requests
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	ctx := r.Context()
-	var submissionData globals.SubmissionData
-
-	// Extract session cookie
-	cookie, err := r.Cookie("session")
-	if err != nil {
-		http.Error(w, "Session cookie not found", http.StatusUnauthorized)
-		return
-	}
-	sessionID := cookie.Value
-
-	slug := r.PathValue("slug")
-	level, err := getLevelParam(slug)
-	if err != nil {
-		http.Error(w, "Invalid url request", http.StatusBadRequest)
-		return
-	}
-	newSlug := fmt.Sprintf("level%d", level)
-
-	// Get session info from DB
-	sdata, err := getSessionData(ctx, sessionID)
-	if err != nil {
-		http.Error(w, "Invalid or expired session", http.StatusUnauthorized)
-		return
-	}
-
-	if sdata.NextReleaseLevel <= level {
-		http.Error(w, "Level is not released yet!", http.StatusForbidden)
-		return
-	}
-
-	if level > sdata.CurrentLevel {
-		http.Error(w, fmt.Sprintf("Level not unlocked yet, please complete level%d first", sdata.CurrentLevel), http.StatusForbidden)
-		return
-	}
-
-	// Get submitted answer
-	answer := strings.TrimSpace(r.FormValue("answer"))
-	if answer == "" {
-		http.Error(w, "Answer cannot be empty", http.StatusBadRequest)
-		return
-	}
-
-	// Construct path: data/{level}/answers/{input_id}.txt
-	answerFile := fmt.Sprintf("./puzzles/%s/outputs/%d.txt", newSlug, sdata.InputID)
-	correctBytes, err := os.ReadFile(answerFile)
-	if err != nil {
-		http.Error(w, "Correct answer file not found", http.StatusInternalServerError)
-		return
-	}
-	solution := strings.TrimSpace(string(correctBytes))
-
-	submissionData.CurrentLevel = sdata.CurrentLevel
-	submissionData.GithubID = sdata.GithubID
-	submissionData.Username = sdata.Username
-	submissionData.PuzzleLevel = level
-
-	// Compare answers
-	if answer == solution {
-		submissionData.Pass = true
-	} else {
-		submissionData.Pass = false
-	}
-	status, err := updateUserAttempt(ctx, submissionData)
-	if err != nil {
-		log.Printf("unknown error: %v", err)
-		fmt.Fprintf(w, "an error occured, please try again.")
-		return
-	} else {
-		switch status {
-		case Cooldown:
-			fmt.Fprint(w, "You're on cooldown! Try again later")
+func SubmitAnswerHandler(tpl *template.Template) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Only allow POST requests
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
-		case AlreadyPassed:
-			http.Redirect(w, r, fmt.Sprintf("/puzzles/level%d", submissionData.CurrentLevel), http.StatusSeeOther)
+		}
+
+		ctx := r.Context()
+		var submissionData globals.SubmissionData
+
+		// Extract session cookie
+		cookie, err := r.Cookie("session")
+		if err != nil {
+			http.Error(w, "Session cookie not found", http.StatusUnauthorized)
 			return
-		case LevelPassed:
-			// handle a level passed page here
-			http.Redirect(w, r, fmt.Sprintf("/puzzles/level%d", level+1), http.StatusSeeOther)
+		}
+		sessionID := cookie.Value
+
+		slug := r.PathValue("slug")
+		level, err := getLevelParam(slug)
+		if err != nil {
+			http.Error(w, "Invalid url request", http.StatusBadRequest)
 			return
-		case LevelFailed:
-			// handle a level failed page here
-			fmt.Fprint(w, "Incorrect answer, please try again.")
+		}
+		newSlug := fmt.Sprintf("level%d", level)
+
+		// Get session info from DB
+		sdata, err := getSessionData(ctx, sessionID)
+		if err != nil {
+			http.Error(w, "Invalid or expired session", http.StatusUnauthorized)
 			return
-		default:
+		}
+
+		if sdata.NextReleaseLevel <= level {
+			http.Error(w, "Level is not released yet!", http.StatusForbidden)
+			return
+		}
+
+		if level > sdata.CurrentLevel {
+			http.Error(w, fmt.Sprintf("Level not unlocked yet, please complete level%d first", sdata.CurrentLevel), http.StatusForbidden)
+			return
+		}
+
+		// Get submitted answer
+		answer := strings.TrimSpace(r.FormValue("answer"))
+		if answer == "" {
+			http.Error(w, "Answer cannot be empty", http.StatusBadRequest)
+			return
+		}
+
+		// Construct path: data/{level}/answers/{input_id}.txt
+		answerFile := fmt.Sprintf("./puzzles/%s/outputs/%d.txt", newSlug, sdata.InputID)
+		correctBytes, err := os.ReadFile(answerFile)
+		if err != nil {
+			http.Error(w, "Correct answer file not found", http.StatusInternalServerError)
+			return
+		}
+		solution := strings.TrimSpace(string(correctBytes))
+
+		submissionData.CurrentLevel = sdata.CurrentLevel
+		submissionData.GithubID = sdata.GithubID
+		submissionData.Username = sdata.Username
+		submissionData.PuzzleLevel = level
+
+		// Compare answers
+		if answer == solution {
+			submissionData.Pass = true
+		} else {
+			submissionData.Pass = false
+		}
+		status, err := updateUserAttempt(ctx, submissionData)
+		if err != nil {
 			log.Printf("unknown error: %v", err)
 			fmt.Fprintf(w, "an error occured, please try again.")
 			return
+		} else {
+			switch status {
+			case Cooldown:
+				tpl.ExecuteTemplate(w, "base", map[string]any{
+					"Answer":   true,
+					"Cooldown": true,
+				})
+				return
+			case AlreadyPassed:
+				http.Redirect(w, r, fmt.Sprintf("/puzzles/level%d", submissionData.CurrentLevel), http.StatusSeeOther)
+				return
+			case LevelPassed:
+				tpl.ExecuteTemplate(w, "base", map[string]any{
+					"Answer":    true,
+					"Passed":    true,
+					"NextLevel": level + 1,
+				})
+				// http.Redirect(w, r, fmt.Sprintf("/puzzles/level%d", level+1), http.StatusSeeOther)
+				return
+			case LevelFailed:
+				tpl.ExecuteTemplate(w, "base", map[string]any{
+					"Answer": true,
+					"Failed": true,
+					"Level":  level,
+				})
+				return
+			default:
+				log.Printf("unknown error: %v", err)
+				fmt.Fprintf(w, "an error occured, please try again.")
+				return
+			}
 		}
 	}
 }
@@ -195,7 +208,7 @@ func submissionTx(ctx context.Context, tx pgx.Tx, submissionData globals.Submiss
 
 	if newAttempts%3 == 0 {
 		cooldownMinutes := (newAttempts / 3) * 15
-		cooldownDuration := fmt.Sprintf("%d seconds", int(cooldownMinutes))
+		cooldownDuration := fmt.Sprintf("%d minutes", int(cooldownMinutes))
 
 		_, err := tx.Exec(ctx, `
             UPDATE submissions SET
