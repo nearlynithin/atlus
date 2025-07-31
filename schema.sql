@@ -1,3 +1,5 @@
+SET timezone = 'UTC';
+
 CREATE TABLE
     IF NOT EXISTS users (
         github_id INT PRIMARY KEY,
