@@ -1,0 +1,14 @@
+{{template "base" .}}
+
+{{block "profile" .}}
+{{if .Profile}}
+<div class="min-h-screen bg-bgdark text-textmain flex flex-col items-center justify-center px-4 py-8 space-y-6">
+  <img src="{{.Avatar}}" alt="Avatar" class="w-32 h-32 rounded-full shadow-lg border-4 border-gold">
+  <h1 class="text-4xl font-heading text-yellowgold">{{.Username}}</h1>
+  <p class="text-lg font-mono text-golddark">LEVEL : <span class="text-gold">{{.CurrentLevel}}</span></p>
+  <a href="{{.GithubUrl}}" class="text-gold underline hover:text-yellowgold transition">{{.GithubUrl}}</a>
+  <p class="text-md font-mono text-golddark">Streak: <span class="text-gold">{{.Streak}}</span></p>
+  <p>personal leaderboard here<p>
+</div>
+{{end}}
+{{end}}
