@@ -107,7 +107,7 @@ func SubmitAnswerHandler(tpl *template.Template) http.HandlerFunc {
 			case Cooldown:
 				tpl.ExecuteTemplate(w, "base", map[string]any{
 					"LoggedIn": true,
-					"Answer":   true,
+					"Info":     true,
 					"Cooldown": true,
 				})
 				return
@@ -117,7 +117,7 @@ func SubmitAnswerHandler(tpl *template.Template) http.HandlerFunc {
 			case LevelPassed:
 				tpl.ExecuteTemplate(w, "base", map[string]any{
 					"LoggedIn":  true,
-					"Answer":    true,
+					"Info":      true,
 					"Passed":    true,
 					"NextLevel": level + 1,
 				})
@@ -126,7 +126,7 @@ func SubmitAnswerHandler(tpl *template.Template) http.HandlerFunc {
 			case LevelFailed:
 				tpl.ExecuteTemplate(w, "base", map[string]any{
 					"LoggedIn": true,
-					"Answer":   true,
+					"Info":     true,
 					"Failed":   true,
 					"Level":    level,
 				})

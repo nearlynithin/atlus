@@ -1,0 +1,36 @@
+{{template "base" .}}
+
+{{block "info" .}}
+{{if .Info}}
+
+{{if .Passed}}
+<p> That's the right answer! you may proceed to the next level :)</p>
+<a href="/puzzles/level{{.NextLevel}}" class="underline text-yellow-300 hover:text-yellow-200 transition">
+  Click here to go to Level {{.NextLevel}}
+</a>
+
+{{else if .Failed}}
+<p> That's the wrong answer ;( </p>
+<p> Make sure you are using all of the input</p>
+<a href="/puzzles/level{{.Level}}" class="underline text-yellow-300 hover:text-yellow-200 transition">Click here to try again</a>
+
+{{else if .Cooldown}}
+<p>Too many attempts, you will need to wait for some time to submit more answers :(</p>
+
+{{else if .NotReleased}}
+<h3 class="text-xl font-semibold text-yellow-300">Hold on, this level isn't available yet!</h3>
+<p class="mt-2">Level {{.NextLevel}} is scheduled for release soon. Please check back later :)</p>
+
+{{else if .Locked}}
+<h3 class="text-xl font-semibold text-yellow-300">You haven't unlocked this level yet!</h3>
+<p class="mt-2">You will need to complete Level {{.CurrentLevel}} to access further levels :)</p>
+
+{{else if .InvalidRequest}}
+<h3 class="text-xl font-semibold text-yellow-300">Oops! Something went wrong :(</h3>
+<p class="mt-2">This page doesn’t exist, or maybe it never did.</p>
+<p class="mt-2">If you think this is a bug, please let us know at <a href="mailto:sceptix@sjec.ac.in" class="underline">sceptix@sjec.ac.in</a>.</p>
+
+{{end}}
+
+{{end}}
+{{end}}

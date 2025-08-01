@@ -19,7 +19,12 @@ func LevelHandler(tpl *template.Template) http.HandlerFunc {
 		slug := r.PathValue("slug")
 		level, err := getLevelParam(slug)
 		if err != nil {
-			http.Error(w, "Invalid url request", http.StatusBadRequest)
+			tpl.ExecuteTemplate(w, "base", map[string]any{
+				"LoggedIn":       true,
+				"Info":           true,
+				"InvalidRequest": true,
+			})
+			log.Print("Invalid url request", http.StatusBadRequest)
 			return
 		}
 
@@ -40,12 +45,24 @@ func LevelHandler(tpl *template.Template) http.HandlerFunc {
 		loggedIn := true
 
 		if sdata.NextReleaseLevel <= level {
-			http.Error(w, "Level is not released yet!", http.StatusForbidden)
+			tpl.ExecuteTemplate(w, "base", map[string]any{
+				"LoggedIn":    true,
+				"Info":        true,
+				"NotReleased": true,
+				"NextLevel":   sdata.NextReleaseLevel,
+			})
+			log.Print("Level is not released yet!", http.StatusForbidden)
 			return
 		}
 
 		if level > sdata.CurrentLevel {
-			http.Error(w, fmt.Sprintf("Level not unlocked yet, please complete level%d first", sdata.CurrentLevel), http.StatusForbidden)
+			tpl.ExecuteTemplate(w, "base", map[string]any{
+				"LoggedIn":     true,
+				"Info":         true,
+				"Locked":       true,
+				"CurrentLevel": sdata.CurrentLevel,
+			})
+			log.Printf("Level not unlocked yet, please complete level%d first", sdata.CurrentLevel)
 			return
 		}
 
