@@ -1,99 +1,172 @@
 {{block "leaderboard-table" .}}
 <div class="leaderboard-box mt-10 mb-16 overflow-x-auto px-2">
     {{if .StreakRune}}
-    <div class="mb-8">
-        <h2 class="text-yellow-300 text-lg font-semibold mb-4">Streak Leaderboard</h2>
-        <div class="bg-zinc-900 rounded-xl overflow-hidden shadow-lg ring-1 ring-yellow-300/50">
-            <table class="min-w-full text-sm">
-                <thead class="bg-yellow-500/70 text-gray-100 font-semibold">
-                    <tr>
-                        <th class="px-6 py-3 text-left">Username</th>
-                        <th class="px-6 py-3 text-left">Streak</th>
-                        <th class="px-6 py-3 text-left">GitHub</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-yellow-200/20">
-                    {{range .StreakRune}}
-                    <tr class="hover:bg-yellow-100/10 transition-colors duration-200">
-                        <td class="px-6 py-4 text-white">{{.Username}}</td>
-                        <td class="px-6 py-4 text-yellow-300 font-medium">{{.Streak}}</td>
-                        <td class="px-6 py-4">
-                            <a href="{{.GithubUrl}}" class="text-yellow-200 hover:text-yellow-100 hover:underline transition-colors" target="_blank" rel="noopener noreferrer">
-                                {{.GithubUrl}}
-                            </a>
-                        </td>
-                    </tr>
-                    {{else}}
-                    <tr>
-                        <td colspan="3" class="px-6 py-8 text-zinc-400 text-center">Loading...</td>
-                    </tr>
-                    {{end}}
-                </tbody>
-            </table>
+    <div class="mb-12">
+        <h2 class="text-yellow-300 text-xl font-bold mb-6 text-center">Streak Leaderboard</h2>
+        <div class="overflow-hidden">
+            <div class="px-6 py-2">
+                <div class="grid grid-cols-9 gap-4 text-yellow-200 font-bold text-sm uppercase tracking-wide text-center">
+                    <div class="col-span-4">Username</div>
+                    <div class="col-span-2">Streak</div>
+                    <div class="col-span-3">GitHub</div>
+                </div>
+            </div>
+            <div class="space-y-1 py-2">
+                {{range $index, $user := .StreakRune}}
+                {{$rank := add $index 1}}
+                <div class="grid grid-cols-9 gap-4 px-6 py-4 mx-2 rounded-lg transition-all duration-200
+                            {{if eq $rank 1}}bg-yellow-500/20 hover:bg-yellow-500/25
+                            {{else if eq $rank 2}}bg-yellow-500/15 hover:bg-yellow-500/20
+                            {{else if eq $rank 3}}bg-yellow-500/10 hover:bg-yellow-500/15
+                            {{else}}bg-yellow-500/5 hover:bg-yellow-500/10{{end}}">
+                    <div class="col-span-4 flex justify-center items-center text-white font-medium">
+                        {{.Username}}
+                    </div>
+                    <div class="col-span-2 flex justify-center">
+                        <span class="px-3 py-1 bg-yellow-500/20 text-yellow-300 font-bold text-sm rounded">
+                            {{.Streak}}
+                        </span>
+                    </div>
+                    <div class="col-span-3 flex justify-center">
+                        <a href="{{.GithubUrl}}" class="text-yellow-400 hover:text-yellow-300 hover:underline transition-colors text-sm font-medium truncate" target="_blank" rel="noopener noreferrer">
+                            {{.GithubUrl}}
+                        </a>
+                    </div>
+                </div>
+                {{else}}
+                <div class="px-6 py-12 text-center">
+                    <div class="text-yellow-300/60 text-lg">Loading streaks...</div>
+                </div>
+                {{end}}
+            </div>
         </div>
     </div>
     {{end}}
 
     {{if .FlashRune}}
-    <div class="mb-8">
-        <h2 class="text-yellow-300 text-lg font-semibold mb-4">Fastest Submissions</h2>
-        <div class="bg-zinc-900 rounded-xl overflow-hidden shadow-lg ring-1 ring-yellow-300/50">
-            <table class="min-w-full text-sm">
-                <thead class="bg-yellow-500/70 text-gray-100 font-semibold">
-                    <tr>
-                        <th class="px-6 py-3 text-left">Level</th>
-                        <th class="px-6 py-3 text-left">Username</th>
-                        <th class="px-6 py-3 text-left">Time</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-yellow-200/20">
-                    {{range .FlashRune}}
-                    <tr class="hover:bg-yellow-100/10 transition-colors duration-200">
-                        <td class="px-6 py-4 text-yellow-300 font-medium">{{.LevelId}}</td>
-                        <td class="px-6 py-4 text-white">{{.Username}}</td>
-                        <td class="px-6 py-4 text-green-400 font-mono">{{.TimeTaken}}</td>
-                    </tr>
-                    {{else}}
-                    <tr>
-                        <td colspan="3" class="px-6 py-8 text-zinc-400 text-center">Loading...</td>
-                    </tr>
-                    {{end}}
-                </tbody>
-            </table>
+    <div class="mb-12">
+        <h2 class="text-yellow-300 text-xl font-bold mb-6 text-center">Fastest Submissions</h2>
+        <div class="overflow-hidden">
+            <div class="px-6 py-2">
+                <div class="grid grid-cols-9 gap-4 text-yellow-200 font-bold text-sm uppercase tracking-wide text-center">
+                    <div class="col-span-3">Level</div>
+                    <div class="col-span-3">Username</div>
+                    <div class="col-span-3">Time</div>
+                </div>
+            </div>
+            <div class="space-y-1 py-2">
+                {{range $index, $submission := .FlashRune}}
+                {{$rank := add $index 1}}
+                <div class="grid grid-cols-9 gap-4 px-6 py-4 mx-2 rounded-lg transition-all duration-200
+                            {{if eq $rank 1}}bg-yellow-500/20 hover:bg-yellow-500/25
+                            {{else if eq $rank 2}}bg-yellow-500/15 hover:bg-yellow-500/20
+                            {{else if eq $rank 3}}bg-yellow-500/10 hover:bg-yellow-500/15
+                            {{else}}bg-yellow-500/5 hover:bg-yellow-500/10{{end}}">
+                    <div class="col-span-3 flex justify-center">
+                        <span class="px-3 py-1 bg-yellow-500/20 text-yellow-300 font-bold text-sm rounded">
+                            {{.LevelId}}
+                        </span>
+                    </div>
+                    <div class="col-span-3 flex justify-center items-center text-white font-medium">
+                        {{.Username}}
+                    </div>
+                    <div class="col-span-3 flex justify-center">
+                        <span class="px-3 py-1 bg-green-500/20 text-green-400 font-mono font-bold text-sm rounded">
+                            {{.TimeTaken}}
+                        </span>
+                    </div>
+                </div>
+                {{else}}
+                <div class="px-6 py-12 text-center">
+                    <div class="text-yellow-300/60 text-lg">Loading submissions...</div>
+                </div>
+                {{end}}
+            </div>
         </div>
     </div>
     {{end}}
 
     {{if .ChampionRune}}
-    <div class="mb-8">
-        <h2 class="text-yellow-300 text-lg font-semibold mb-4">Champions</h2>
-        <div class="bg-zinc-900 rounded-xl overflow-hidden shadow-lg ring-1 ring-yellow-300/50">
-            <table class="min-w-full text-sm">
-                <thead class="bg-yellow-500/70 text-gray-100 font-semibold">
-                    <tr>
-                        <th class="px-6 py-3 text-left">Username</th>
-                        <th class="px-6 py-3 text-left">Current Level</th>
-                        <th class="px-6 py-3 text-left">GitHub</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-yellow-200/20">
-                    {{range .ChampionRune}}
-                    <tr class="hover:bg-yellow-100/10 transition-colors duration-200">
-                        <td class="px-6 py-4 text-white">{{.Username}}</td>
-                        <td class="px-6 py-4 text-yellow-300 font-medium">{{.CurrentLevel}}</td>
-                        <td class="px-6 py-4">
-                            <a href="{{.GithubUrl}}" class="text-yellow-200 hover:text-yellow-100 hover:underline transition-colors" target="_blank" rel="noopener noreferrer">
-                                {{.GithubUrl}}
-                            </a>
-                        </td>
-                    </tr>
-                    {{else}}
-                    <tr>
-                        <td colspan="3" class="px-6 py-8 text-zinc-400 text-center">Loading...</td>
-                    </tr>
-                    {{end}}
-                </tbody>
-            </table>
+    <div class="mb-12">
+        <h2 class="text-yellow-300 text-xl font-bold mb-6 text-center">Champions</h2>
+        <div class="overflow-hidden">
+            <div class="px-6 py-2">
+                <div class="grid grid-cols-9 gap-4 text-yellow-200 font-bold text-sm uppercase tracking-wide text-center">
+                    <div class="col-span-4">Username</div>
+                    <div class="col-span-2">Level</div>
+                    <div class="col-span-3">GitHub</div>
+                </div>
+            </div>
+            <div class="space-y-1 py-2">
+                {{range $index, $champion := .ChampionRune}}
+                {{$rank := add $index 1}}
+                <div class="grid grid-cols-9 gap-4 px-6 py-4 mx-2 rounded-lg transition-all duration-200
+                            {{if eq $rank 1}}bg-yellow-500/20 hover:bg-yellow-500/25
+                            {{else if eq $rank 2}}bg-yellow-500/15 hover:bg-yellow-500/20
+                            {{else if eq $rank 3}}bg-yellow-500/10 hover:bg-yellow-500/15
+                            {{else}}bg-yellow-500/5 hover:bg-yellow-500/10{{end}}">
+                    <div class="col-span-4 flex justify-center items-center text-white font-medium">
+                        {{.Username}}
+                    </div>
+                    <div class="col-span-2 flex justify-center">
+                        <span class="px-3 py-1 bg-yellow-500/20 text-yellow-300 font-bold text-sm rounded">
+                            {{.CurrentLevel}}
+                        </span>
+                    </div>
+                    <div class="col-span-3 flex justify-center">
+                        <a href="{{.GithubUrl}}" class="text-yellow-400 hover:text-yellow-300 hover:underline transition-colors text-sm font-medium truncate" target="_blank" rel="noopener noreferrer">
+                            {{.GithubUrl}}
+                        </a>
+                    </div>
+                </div>
+                {{else}}
+                <div class="px-6 py-12 text-center">
+                    <div class="text-yellow-300/60 text-lg">Loading champions...</div>
+                </div>
+                {{end}}
+            </div>
+        </div>
+    </div>
+    {{end}}
+
+    {{if .UserStats}}
+    <div class="mb-12">
+        <div class="overflow-hidden">
+            <div class="px-6 py-2">
+                <div class="grid grid-cols-9 gap-4 text-yellow-200 font-bold text-sm uppercase tracking-wide text-center">
+                    <div class="col-span-3">Level</div>
+                    <div class="col-span-3">Time</div>
+                    <div class="col-span-3">Attempts</div>
+                </div>
+            </div>
+            <div class="space-y-1 py-2">
+                {{range $index, $stat := .UserStats}}
+                {{$rank := add $index 1}}
+                <div class="grid grid-cols-9 gap-4 px-6 py-4 mx-2 rounded-lg transition-all duration-200
+                            {{if eq $rank 1}}bg-yellow-500/20 hover:bg-yellow-500/25
+                            {{else if eq $rank 2}}bg-yellow-500/15 hover:bg-yellow-500/20
+                            {{else if eq $rank 3}}bg-yellow-500/10 hover:bg-yellow-500/15
+                            {{else}}bg-yellow-500/5 hover:bg-yellow-500/10{{end}}">
+                    <div class="col-span-3 flex justify-center items-center text-white font-medium">
+                        {{.LevelId}}
+                    </div>
+                    <div class="col-span-3 flex justify-center">
+                        <span class="px-3 py-1 bg-yellow-500/20 text-yellow-300 font-mono font-bold text-sm rounded">
+                            {{.TimeTaken}}
+                        </span>
+                    </div>
+                    <div class="col-span-3 flex justify-center">
+                        <span class="px-3 py-1 bg-gray-500/20 text-gray-300 font-bold text-sm rounded">
+                            {{.Attempts}}
+                        </span>
+                    </div>
+                </div>
+                {{else}}
+                <div class="px-6 py-12 text-center">
+                    <div class="text-yellow-300/60 text-lg">No stats available</div>
+                </div>
+                {{end}}
+            </div>
         </div>
     </div>
     {{end}}

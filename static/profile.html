@@ -8,7 +8,12 @@
   <p class="text-lg font-mono text-golddark">LEVEL : <span class="text-gold">{{.CurrentLevel}}</span></p>
   <a href="{{.GithubUrl}}" class="text-gold underline hover:text-yellowgold transition">{{.GithubUrl}}</a>
   <p class="text-md font-mono text-golddark">Streak: <span class="text-gold">{{.Streak}}</span></p>
-  <p>personal leaderboard here<p>
+    <div id="streak-leaderboard"
+         hx-get="/leaderboard/live/stats?user={{.Username}}"
+         hx-swap="innerHTML"
+         hx-trigger="load, every 3s">
+        <div class="htmx-indicator">Loading...</div>
+    </div>
 </div>
 {{end}}
 {{end}}
