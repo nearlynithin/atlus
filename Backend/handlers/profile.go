@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"time"
 )
@@ -13,12 +14,14 @@ func ProfileHandler(tpl *template.Template) http.HandlerFunc {
 
 		c, err := r.Cookie("session")
 		if err != nil {
+			http.Redirect(w, r, "/login/", http.StatusSeeOther)
 			fmt.Fprintf(w, "Invalid session, please login to continue : %v", err)
 			return
 		}
 		sdata, err := getSessionData(ctx, c.Value)
 		if err != nil {
-			fmt.Fprintf(w, "Invalid session, please login to continue : %v", err)
+			http.Redirect(w, r, "/login/", http.StatusSeeOther)
+			log.Print("Invalid session, please login to continue : %v", err)
 			return
 		}
 
@@ -26,6 +29,7 @@ func ProfileHandler(tpl *template.Template) http.HandlerFunc {
 		joined := fmt.Sprintf("Joined %v ago", created)
 
 		tpl.ExecuteTemplate(w, "base", map[string]any{
+			"LoggedIn":     true,
 			"Profile":      true,
 			"Avatar":       sdata.Avatar,
 			"Username":     sdata.Username,

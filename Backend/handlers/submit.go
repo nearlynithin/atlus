@@ -39,7 +39,8 @@ func SubmitAnswerHandler(tpl *template.Template) http.HandlerFunc {
 		// Extract session cookie
 		cookie, err := r.Cookie("session")
 		if err != nil {
-			http.Error(w, "Session cookie not found", http.StatusUnauthorized)
+			http.Redirect(w, r, "/login/", http.StatusSeeOther)
+			log.Print("Session cookie not found", http.StatusUnauthorized)
 			return
 		}
 		sessionID := cookie.Value
@@ -55,7 +56,7 @@ func SubmitAnswerHandler(tpl *template.Template) http.HandlerFunc {
 		// Get session info from DB
 		sdata, err := getSessionData(ctx, sessionID)
 		if err != nil {
-			http.Error(w, "Invalid or expired session", http.StatusUnauthorized)
+			http.Redirect(w, r, "/login/", http.StatusSeeOther)
 			return
 		}
 
@@ -105,6 +106,7 @@ func SubmitAnswerHandler(tpl *template.Template) http.HandlerFunc {
 			switch status {
 			case Cooldown:
 				tpl.ExecuteTemplate(w, "base", map[string]any{
+					"LoggedIn": true,
 					"Answer":   true,
 					"Cooldown": true,
 				})
@@ -114,6 +116,7 @@ func SubmitAnswerHandler(tpl *template.Template) http.HandlerFunc {
 				return
 			case LevelPassed:
 				tpl.ExecuteTemplate(w, "base", map[string]any{
+					"LoggedIn":  true,
 					"Answer":    true,
 					"Passed":    true,
 					"NextLevel": level + 1,
@@ -122,9 +125,10 @@ func SubmitAnswerHandler(tpl *template.Template) http.HandlerFunc {
 				return
 			case LevelFailed:
 				tpl.ExecuteTemplate(w, "base", map[string]any{
-					"Answer": true,
-					"Failed": true,
-					"Level":  level,
+					"LoggedIn": true,
+					"Answer":   true,
+					"Failed":   true,
+					"Level":    level,
 				})
 				return
 			default:

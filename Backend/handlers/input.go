@@ -23,7 +23,8 @@ func InputHandler(w http.ResponseWriter, r *http.Request) {
 
 	c, err := r.Cookie("session")
 	if err != nil {
-		http.Error(w, "session invalid ", http.StatusUnauthorized)
+		http.Redirect(w, r, "/login/", http.StatusSeeOther)
+		log.Print("session invalid ", http.StatusUnauthorized)
 	}
 
 	slug := r.PathValue("slug")
@@ -35,7 +36,8 @@ func InputHandler(w http.ResponseWriter, r *http.Request) {
 
 	sdata, err := getSessionData(ctx, c.Value)
 	if err != nil {
-		http.Error(w, "You are not authenticated, please sign in to access the inputs", http.StatusUnauthorized)
+		http.Redirect(w, r, "/login/", http.StatusSeeOther)
+		log.Print("You are not authenticated, please sign in to access the inputs", http.StatusUnauthorized)
 		return
 	}
 

@@ -25,13 +25,15 @@ func LevelHandler(tpl *template.Template) http.HandlerFunc {
 
 		c, err := r.Cookie("session")
 		if err != nil {
-			http.Error(w, "session invalid ", http.StatusUnauthorized)
+			http.Redirect(w, r, "/login/", http.StatusSeeOther)
+			log.Print("session invalid ", http.StatusUnauthorized)
 			return
 		}
 
 		sdata, err := getSessionData(ctx, c.Value)
 		if err != nil {
-			http.Error(w, "Please login to play", http.StatusUnauthorized)
+			http.Redirect(w, r, "/login/", http.StatusSeeOther)
+			log.Print("Please login to play", http.StatusUnauthorized)
 			return
 		}
 
