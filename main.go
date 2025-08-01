@@ -24,7 +24,9 @@ func main() {
 	handlers.InitDB()
 	mux := http.NewServeMux()
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	tpl := template.Must(template.ParseGlob("static/*.html"))
+	tpl := template.Must(template.New("").Funcs(template.FuncMap{
+		"add": func(a int, b int) int { return a + b },
+	}).ParseGlob("static/*.html"))
 	conf := handlers.InitOAuthConfig()
 	lf := handlers.LoginFlow{Conf: conf}
 
