@@ -35,7 +35,7 @@ func InitOAuthConfig() *oauth2.Config {
 		ClientSecret: GithubClientSecret,
 		Scopes:       []string{"user:email"},
 		Endpoint:     github.Endpoint,
-		RedirectURL:  "http://" + globals.Hostname + ":8000/github/callback/",
+		RedirectURL:  fmt.Sprintf("http://%s:%s/github/callback/", globals.Hostname, globals.Port),
 	}
 
 	return Conf
