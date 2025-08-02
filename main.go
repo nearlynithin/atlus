@@ -22,6 +22,8 @@ func main() {
 	globals.Port = os.Getenv("PORT")
 
 	handlers.InitDB()
+	defer globals.DB.Close()
+
 	mux := http.NewServeMux()
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	tpl := template.Must(template.New("").Funcs(template.FuncMap{
