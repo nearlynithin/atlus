@@ -3,11 +3,20 @@
 {{block "profile" .}}
 {{if .Profile}}
 <div class="min-h-screen bg-bgdark text-textmain flex flex-col items-center justify-center px-4 py-8 space-y-6">
-  <img src="{{.Avatar}}" alt="Avatar" class="w-32 h-32 rounded-full shadow-lg border-4 border-gold">
-  <h1 class="text-4xl font-heading text-yellowgold">{{.Username}}</h1>
-  <p class="text-lg font-mono text-golddark">LEVEL : <span class="text-gold">{{.CurrentLevel}}</span></p>
-  <a href="{{.GithubUrl}}" class="text-gold underline hover:text-yellowgold transition">{{.GithubUrl}}</a>
-  <p class="text-md font-mono text-golddark">Streak: <span class="text-gold">{{.Streak}}</span></p>
+    <img src="{{.Avatar}}" alt="Avatar" class="w-32 h-32 rounded-full shadow-lg border-4 border-gold">
+    <h1 class="text-4xl font-heading text-yellowgold">{{.Username}}</h1>
+    <div class="flex justify-center space-x-12 font-mono text-golddark">
+        <div class="flex flex-col items-center">
+            <span class="text-lg uppercase">Level</span>
+            <span class="text-gold text-2xl font-bold">{{.CurrentLevel}}</span>
+        </div>
+        <div class="flex flex-col items-center">
+            <span class="text-lg uppercase">Streak</span>
+            <span class="text-gold text-2xl font-bold">{{.Streak}}</span>
+        </div>
+    </div>
+    <a href="{{.GithubUrl}}" class="text-yellowgold underline hover:text-gold transition">{{.GithubUrl}}</a>
+    <p class="text-sm italic font-mono text-golddark">{{.Joined}}</p>
     <div id="streak-leaderboard"
          hx-get="/leaderboard/live/stats?user={{.Username}}"
          hx-swap="innerHTML"
