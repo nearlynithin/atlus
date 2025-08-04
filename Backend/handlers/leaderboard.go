@@ -22,18 +22,8 @@ type leaderboardFunc func(ctx context.Context) (map[string]any, error)
 
 func LeaderboardHandler(tpl *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		c, err := r.Cookie("session")
-		if err != nil {
-			http.Redirect(w, r, "/login/", http.StatusSeeOther)
-			fmt.Fprintf(w, "Invalid session, please login to continue : %v", err)
-			return
-		}
-		_, err = getSessionData(ctx, c.Value)
-		if err != nil {
-			http.Redirect(w, r, "/login/", http.StatusSeeOther)
-			return
-		}
+		// ctx := r.Context()
+		// sdata := ctx.Value("sessionData").(globals.SessionData)
 		tpl.ExecuteTemplate(w, "leaderboard", map[string]any{
 			"LoggedIn":    true,
 			"Leaderboard": true,

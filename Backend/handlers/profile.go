@@ -3,27 +3,17 @@ package handlers
 import (
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 	"time"
+
+	"github.com/sceptix-club/atlus/Backend/globals"
 )
 
 func ProfileHandler(tpl *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		c, err := r.Cookie("session")
-		if err != nil {
-			http.Redirect(w, r, "/login/", http.StatusSeeOther)
-			fmt.Fprintf(w, "Invalid session, please login to continue : %v", err)
-			return
-		}
-		sdata, err := getSessionData(ctx, c.Value)
-		if err != nil {
-			http.Redirect(w, r, "/login/", http.StatusSeeOther)
-			log.Printf("Invalid session, please login to continue : %v", err)
-			return
-		}
+		sdata := ctx.Value("sessionData").(globals.SessionData)
 
 		created := time.Now().UTC().Sub(sdata.CreatedAt)
 		joined := fmt.Sprintf("Joined %v ago", created)

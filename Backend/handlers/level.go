@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/sceptix-club/atlus/Backend/globals"
 	"github.com/yuin/goldmark"
 )
 
@@ -28,21 +29,7 @@ func LevelHandler(tpl *template.Template) http.HandlerFunc {
 			return
 		}
 
-		c, err := r.Cookie("session")
-		if err != nil {
-			http.Redirect(w, r, "/login/", http.StatusSeeOther)
-			log.Print("session invalid ", http.StatusUnauthorized)
-			return
-		}
-
-		sdata, err := getSessionData(ctx, c.Value)
-		if err != nil {
-			http.Redirect(w, r, "/login/", http.StatusSeeOther)
-			log.Print("Please login to play", http.StatusUnauthorized)
-			return
-		}
-
-		loggedIn := true
+		sdata := ctx.Value("sessionData").(globals.SessionData)
 
 		if sdata.NextReleaseLevel <= level {
 			tpl.ExecuteTemplate(w, "base", map[string]any{
@@ -87,7 +74,7 @@ func LevelHandler(tpl *template.Template) http.HandlerFunc {
 
 		tpl.ExecuteTemplate(w, "level", map[string]any{
 			"Level":    true,
-			"LoggedIn": loggedIn,
+			"LoggedIn": true,
 			"Slug":     newSlug,
 			"Puzzle":   template.HTML(buf.String()),
 		})

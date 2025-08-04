@@ -36,15 +36,6 @@ func SubmitAnswerHandler(tpl *template.Template) http.HandlerFunc {
 		ctx := r.Context()
 		var submissionData globals.SubmissionData
 
-		// Extract session cookie
-		cookie, err := r.Cookie("session")
-		if err != nil {
-			http.Redirect(w, r, "/login/", http.StatusSeeOther)
-			log.Print("Session cookie not found", http.StatusUnauthorized)
-			return
-		}
-		sessionID := cookie.Value
-
 		slug := r.PathValue("slug")
 		level, err := getLevelParam(slug)
 		if err != nil {
@@ -54,11 +45,7 @@ func SubmitAnswerHandler(tpl *template.Template) http.HandlerFunc {
 		newSlug := fmt.Sprintf("level%d", level)
 
 		// Get session info from DB
-		sdata, err := getSessionData(ctx, sessionID)
-		if err != nil {
-			http.Redirect(w, r, "/login/", http.StatusSeeOther)
-			return
-		}
+		sdata := ctx.Value("sessionData").(globals.SessionData)
 
 		if sdata.NextReleaseLevel <= level {
 			http.Error(w, "Level is not released yet!", http.StatusForbidden)

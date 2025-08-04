@@ -10,6 +10,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/sceptix-club/atlus/Backend/globals"
 )
 
 func InputHandler(w http.ResponseWriter, r *http.Request) {
@@ -21,12 +23,6 @@ func InputHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c, err := r.Cookie("session")
-	if err != nil {
-		http.Redirect(w, r, "/login/", http.StatusSeeOther)
-		log.Print("session invalid ", http.StatusUnauthorized)
-	}
-
 	slug := r.PathValue("slug")
 	level, err := getLevelParam(slug)
 	if err != nil {
@@ -34,12 +30,7 @@ func InputHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sdata, err := getSessionData(ctx, c.Value)
-	if err != nil {
-		http.Redirect(w, r, "/login/", http.StatusSeeOther)
-		log.Print("You are not authenticated, please sign in to access the inputs", http.StatusUnauthorized)
-		return
-	}
+	sdata := ctx.Value("sessionData").(globals.SessionData)
 
 	if sdata.NextReleaseLevel <= level {
 		http.Error(w, "Level is not released yet!", http.StatusForbidden)
