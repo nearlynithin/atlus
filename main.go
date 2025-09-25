@@ -43,6 +43,6 @@ func main() {
 	mux.HandleFunc("/leaderboard/live/{slug}", handlers.LeaderboardLiveHandler(tpl))
 	mux.HandleFunc("/profile", handlers.Authenticator(handlers.ProfileHandler(tpl)))
 
-	fmt.Printf("Listening on %s%s ...\n", globals.Hostname, globals.Port)
+	fmt.Printf("Listening on %s:%s ...\n", globals.Hostname, globals.Port)
 	log.Panic(http.ListenAndServe(":"+globals.Port, mux))
 }

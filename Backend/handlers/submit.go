@@ -14,17 +14,6 @@ import (
 	"github.com/sceptix-club/atlus/Backend/globals"
 )
 
-type SubmissionStatus string
-
-const (
-	AlreadyPassed   SubmissionStatus = "already_passed"
-	LevelIncomplete SubmissionStatus = "level_incomplete"
-	LevelPassed     SubmissionStatus = "level_passed"
-	LevelFailed     SubmissionStatus = "level_failed"
-	Cooldown        SubmissionStatus = "cooldown"
-	SubmissionError SubmissionStatus = "submission_error"
-)
-
 func SubmitAnswerHandler(tpl *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Only allow POST requests
@@ -48,27 +37,32 @@ func SubmitAnswerHandler(tpl *template.Template) http.HandlerFunc {
 		sdata := ctx.Value("sessionData").(globals.SessionData)
 
 		if sdata.NextReleaseLevel <= level {
-			http.Error(w, "Level is not released yet!", http.StatusForbidden)
+			http.Redirect(w, r, fmt.Sprintf("/puzzles/level%d", level), http.StatusSeeOther)
 			return
 		}
 
 		if level > sdata.CurrentLevel {
-			http.Error(w, fmt.Sprintf("Level not unlocked yet, please complete level%d first", sdata.CurrentLevel), http.StatusForbidden)
+			http.Redirect(w, r, fmt.Sprintf("/puzzles/level%d", level), http.StatusSeeOther)
 			return
 		}
 
 		// Get submitted answer
 		answer := strings.TrimSpace(r.FormValue("answer"))
 		if answer == "" {
-			http.Error(w, "Answer cannot be empty", http.StatusBadRequest)
+			globals.RenderInfoPage(tpl, w, true, map[string]any{
+				"Unexpected": true,
+			})
+			log.Printf("Answer cannot be empty: %v\n", err)
 			return
 		}
 
-		// Construct path: data/{level}/answers/{input_id}.txt
 		answerFile := fmt.Sprintf("./puzzles/%s/outputs/%d.txt", newSlug, sdata.InputID)
 		correctBytes, err := os.ReadFile(answerFile)
 		if err != nil {
-			http.Error(w, "Correct answer file not found", http.StatusInternalServerError)
+			globals.RenderInfoPage(tpl, w, true, map[string]any{
+				"Unexpected": true,
+			})
+			log.Printf("Correct answer file not found! %v\n", err)
 			return
 		}
 		solution := strings.TrimSpace(string(correctBytes))
@@ -91,33 +85,30 @@ func SubmitAnswerHandler(tpl *template.Template) http.HandlerFunc {
 			return
 		} else {
 			switch status {
-			case Cooldown:
-				tpl.ExecuteTemplate(w, "base", map[string]any{
-					"LoggedIn": true,
-					"Info":     true,
+			case globals.Cooldown:
+				globals.RenderInfoPage(tpl, w, true, map[string]any{
 					"Cooldown": true,
 				})
 				return
-			case AlreadyPassed:
+			case globals.AlreadyPassed:
 				http.Redirect(w, r, fmt.Sprintf("/puzzles/level%d", submissionData.CurrentLevel), http.StatusSeeOther)
 				return
-			case LevelPassed:
-				tpl.ExecuteTemplate(w, "base", map[string]any{
-					"LoggedIn":  true,
-					"Info":      true,
+			case globals.LevelPassed:
+				globals.RenderInfoPage(tpl, w, true, map[string]any{
 					"Passed":    true,
 					"NextLevel": level + 1,
 				})
-				// http.Redirect(w, r, fmt.Sprintf("/puzzles/level%d", level+1), http.StatusSeeOther)
 				return
-			case LevelFailed:
-				tpl.ExecuteTemplate(w, "base", map[string]any{
-					"LoggedIn": true,
-					"Info":     true,
-					"Failed":   true,
-					"Level":    level,
+			case globals.LevelFailed:
+				globals.RenderInfoPage(tpl, w, true, map[string]any{
+					"Failed": true,
+					"Level":  level,
 				})
 				return
+			case globals.SubmissionError:
+				globals.RenderInfoPage(tpl, w, true, map[string]any{
+					"Unexpected": true,
+				})
 			default:
 				log.Printf("unknown error: %v", err)
 				fmt.Fprintf(w, "an error occured, please try again.")
@@ -127,16 +118,16 @@ func SubmitAnswerHandler(tpl *template.Template) http.HandlerFunc {
 	}
 }
 
-func updateUserAttempt(ctx context.Context, submissionData globals.SubmissionData) (SubmissionStatus, error) {
+func updateUserAttempt(ctx context.Context, submissionData globals.SubmissionData) (globals.SubmissionStatus, error) {
 	tx, err := globals.DB.Begin(ctx)
 	if err != nil {
-		return SubmissionError, fmt.Errorf("failed to begin transaction: %v", err)
+		return globals.SubmissionError, fmt.Errorf("failed to begin transaction: %v", err)
 	}
 	defer tx.Rollback(ctx)
 
 	if submissionData.Pass {
 		if submissionData.PuzzleLevel > submissionData.CurrentLevel {
-			return LevelIncomplete, fmt.Errorf("Level %d not completed yet", submissionData.CurrentLevel)
+			return globals.LevelIncomplete, fmt.Errorf("Level %d not completed yet", submissionData.CurrentLevel)
 		}
 		if submissionData.PuzzleLevel == submissionData.CurrentLevel {
 			// user passed the currentLevel which he is at
@@ -148,7 +139,7 @@ func updateUserAttempt(ctx context.Context, submissionData globals.SubmissionDat
 		`, submissionData.CurrentLevel+1, submissionData.GithubID)
 
 			if err != nil {
-				return SubmissionError, fmt.Errorf("error advancing user level : %v", err)
+				return globals.SubmissionError, fmt.Errorf("error advancing user level : %v", err)
 			}
 			log.Printf("Advanced user %s to level %d", submissionData.Username, submissionData.CurrentLevel+1)
 		}
@@ -158,7 +149,7 @@ func updateUserAttempt(ctx context.Context, submissionData globals.SubmissionDat
 	}
 }
 
-func submissionTx(ctx context.Context, tx pgx.Tx, submissionData globals.SubmissionData) (SubmissionStatus, error) {
+func submissionTx(ctx context.Context, tx pgx.Tx, submissionData globals.SubmissionData) (globals.SubmissionStatus, error) {
 
 	var existingAttempts int
 	var hasPassed bool
@@ -171,16 +162,16 @@ func submissionTx(ctx context.Context, tx pgx.Tx, submissionData globals.Submiss
         `, submissionData.GithubID, submissionData.PuzzleLevel).Scan(&existingAttempts, &hasPassed, &cooldownEnd)
 
 	if err != nil && err != pgx.ErrNoRows {
-		return SubmissionError, fmt.Errorf("Error checking existing submission: %v", err)
+		return globals.SubmissionError, fmt.Errorf("Error checking existing submission: %v", err)
 	}
 
 	if hasPassed {
-		return AlreadyPassed, nil
+		return globals.AlreadyPassed, nil
 	}
 
 	// cooldown not complete yet
 	if time.Now().UTC().Before(cooldownEnd) {
-		return Cooldown, nil
+		return globals.Cooldown, nil
 	}
 
 	var newAttempts int
@@ -194,7 +185,7 @@ func submissionTx(ctx context.Context, tx pgx.Tx, submissionData globals.Submiss
             RETURNING attempts
         `, submissionData.GithubID, submissionData.Username, submissionData.PuzzleLevel).Scan(&newAttempts)
 	if err != nil {
-		return SubmissionError, fmt.Errorf("error inserting/updating submission: %v", err)
+		return globals.SubmissionError, fmt.Errorf("error inserting/updating submission: %v", err)
 	}
 
 	if newAttempts%3 == 0 {
@@ -207,7 +198,7 @@ func submissionTx(ctx context.Context, tx pgx.Tx, submissionData globals.Submiss
             WHERE github_id = $2 AND level_id = $3
             `, cooldownDuration, submissionData.GithubID, submissionData.PuzzleLevel)
 		if err != nil {
-			return SubmissionError, fmt.Errorf("error setting cooldown, %v", err)
+			return globals.SubmissionError, fmt.Errorf("error setting cooldown, %v", err)
 		}
 	}
 
@@ -224,7 +215,7 @@ func submissionTx(ctx context.Context, tx pgx.Tx, submissionData globals.Submiss
 	`, submissionData.GithubID, submissionData.PuzzleLevel)
 
 		if err != nil {
-			return SubmissionError, fmt.Errorf("error updating submission as passed, %v", err)
+			return globals.SubmissionError, fmt.Errorf("error updating submission as passed, %v", err)
 		}
 
 		if newAttempts == 1 {
@@ -233,14 +224,14 @@ func submissionTx(ctx context.Context, tx pgx.Tx, submissionData globals.Submiss
                 streak = streak + 1
                 WHERE github_id = $1 `, submissionData.GithubID)
 			if err != nil {
-				return SubmissionError, fmt.Errorf("errror updating streak %v", err)
+				return globals.SubmissionError, fmt.Errorf("errror updating streak %v", err)
 			}
 		}
 		err = tx.Commit(ctx)
 		if err != nil {
-			return SubmissionError, fmt.Errorf("failed to commit transaction: %v", err)
+			return globals.SubmissionError, fmt.Errorf("failed to commit transaction: %v", err)
 		}
-		return LevelPassed, nil
+		return globals.LevelPassed, nil
 	} else {
 		// user had failed on first attempt, set the streak to zero
 		_, err := tx.Exec(ctx, `
@@ -249,12 +240,12 @@ func submissionTx(ctx context.Context, tx pgx.Tx, submissionData globals.Submiss
                 WHERE github_id = $1
                 `, submissionData.GithubID)
 		if err != nil {
-			return SubmissionError, fmt.Errorf("Error setting streak : %v", err)
+			return globals.SubmissionError, fmt.Errorf("Error setting streak : %v", err)
 		}
 		err = tx.Commit(ctx)
 		if err != nil {
-			return SubmissionError, fmt.Errorf("failed to commit transaction: %v", err)
+			return globals.SubmissionError, fmt.Errorf("failed to commit transaction: %v", err)
 		}
-		return LevelFailed, nil
+		return globals.LevelFailed, nil
 	}
 }
