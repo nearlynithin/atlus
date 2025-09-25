@@ -152,20 +152,22 @@ func updateSessionToken(ctx context.Context, githubID int64, newSessionID string
 func getSessionData(ctx context.Context, sessionID string) (globals.SessionData, error) {
 	var sdata globals.SessionData
 
+	var fetchErr error
+
+	done := make(chan error, 1)
+
+	go func() {
+		err := globals.DB.QueryRow(ctx, `
+		    SELECT u.github_id, u.input_id, u.current_level, u.username, u.github_url, u.avatar, u.email, u.streak, u.created_at
+		    FROM users u
+		    JOIN sessions s on s.github_id = u.github_id
+		    WHERE s.session_id = $1 AND s.expires_at > NOW()
+		    `, sessionID).Scan(&sdata.GithubID, &sdata.InputID, &sdata.CurrentLevel, &sdata.Username,
+			&sdata.GithubUrl, &sdata.Avatar, &sdata.Email, &sdata.Streak, &sdata.CreatedAt)
+		done <- err
+	}()
+
 	err := globals.DB.QueryRow(ctx, `
-		SELECT u.github_id, u.input_id, u.current_level, u.username, u.github_url, u.avatar, u.email, u.streak, u.created_at
-		FROM users u
-		JOIN sessions s on s.github_id = u.github_id
-		WHERE s.session_id = $1 AND s.expires_at > NOW()
-		`, sessionID).Scan(&sdata.GithubID, &sdata.InputID, &sdata.CurrentLevel, &sdata.Username,
-		&sdata.GithubUrl, &sdata.Avatar, &sdata.Email, &sdata.Streak, &sdata.CreatedAt)
-
-	if err != nil {
-		log.Printf("error fetching session data, %v", err)
-		return globals.SessionData{}, err
-	}
-
-	err = globals.DB.QueryRow(ctx, `
         SELECT level_id FROM levels
         WHERE release_time > NOW()
         ORDER BY release_time
@@ -177,10 +179,17 @@ func getSessionData(ctx context.Context, sessionID string) (globals.SessionData,
 			// TODO: this is means there is no new level scheduled to release => end of the event, need to handle it later
 			sdata.NextReleaseLevel = 100
 		} else {
-			fmt.Println("But this happened, so sql.ErrNoRows didn't work")
+			log.Printf("Error fetching next release level data :%v\n", err)
 			return globals.SessionData{}, err
 		}
 	}
+
+	fetchErr = <-done
+	if fetchErr != nil {
+		log.Printf("error fetching session data, %v", fetchErr)
+		return globals.SessionData{}, fetchErr
+	}
+
 	return sdata, nil
 }
 
