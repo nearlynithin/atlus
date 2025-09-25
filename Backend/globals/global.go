@@ -1,6 +1,8 @@
 package globals
 
 import (
+	"html/template"
+	"net/http"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -44,6 +46,26 @@ type SubmissionData struct {
 	CurrentLevel int
 	PuzzleLevel  int
 	Pass         bool
+}
+
+type SubmissionStatus int
+
+const (
+	AlreadyPassed SubmissionStatus = iota
+	LevelIncomplete
+	LevelPassed
+	LevelFailed
+	Cooldown
+	SubmissionError
+)
+
+func RenderInfoPage(tpl *template.Template, w http.ResponseWriter, loggedIn bool, data map[string]any) {
+	data["LoggedIn"] = loggedIn
+	data["Info"] = true
+	err := tpl.ExecuteTemplate(w, "base", data)
+	if err != nil {
+		http.Error(w, "Invalid url request", http.StatusBadRequest)
+	}
 }
 
 var DB *pgxpool.Pool
