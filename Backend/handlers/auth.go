@@ -53,7 +53,7 @@ func RootHandler(tpl *template.Template) http.HandlerFunc {
 			if err != nil {
 				loggedIn = false
 			} else {
-				fmt.Printf("\nFETCHED USER: %s\n", sdata.Username)
+				log.Printf("FETCHED USER: %s\n", sdata.Username)
 				loggedIn = true
 			}
 		}
@@ -87,7 +87,7 @@ func (Lf *LoginFlow) GithubLoginHandler(w http.ResponseWriter, r *http.Request) 
 		HttpOnly: true,
 	}
 	http.SetCookie(w, c)
-	fmt.Printf("State set %s", state)
+	// fmt.Printf("State set %s", state)
 
 	redirectURL := Lf.Conf.AuthCodeURL(state, oauth2.AccessTypeOnline)
 	http.Redirect(w, r, redirectURL, http.StatusSeeOther)

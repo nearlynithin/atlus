@@ -20,36 +20,27 @@ func LevelHandler(tpl *template.Template) http.HandlerFunc {
 		slug := r.PathValue("slug")
 		level, err := getLevelParam(slug)
 		if err != nil {
-			tpl.ExecuteTemplate(w, "base", map[string]any{
-				"LoggedIn":       true,
-				"Info":           true,
+			globals.RenderInfoPage(tpl, w, true, map[string]any{
 				"InvalidRequest": true,
 			})
-			log.Print("Invalid url request", http.StatusBadRequest)
 			return
 		}
 
 		sdata := ctx.Value("sessionData").(globals.SessionData)
 
 		if sdata.NextReleaseLevel <= level {
-			tpl.ExecuteTemplate(w, "base", map[string]any{
-				"LoggedIn":    true,
-				"Info":        true,
+			globals.RenderInfoPage(tpl, w, true, map[string]any{
 				"NotReleased": true,
 				"NextLevel":   sdata.NextReleaseLevel,
 			})
-			log.Print("Level is not released yet!", http.StatusForbidden)
 			return
 		}
 
 		if level > sdata.CurrentLevel {
-			tpl.ExecuteTemplate(w, "base", map[string]any{
-				"LoggedIn":     true,
-				"Info":         true,
+			globals.RenderInfoPage(tpl, w, true, map[string]any{
 				"Locked":       true,
 				"CurrentLevel": sdata.CurrentLevel,
 			})
-			log.Printf("Level not unlocked yet, please complete level%d first", sdata.CurrentLevel)
 			return
 		}
 
@@ -57,8 +48,10 @@ func LevelHandler(tpl *template.Template) http.HandlerFunc {
 		filePath := "./puzzles/" + newSlug + "/" + newSlug + ".md"
 		file, err := os.Open(filePath)
 		if err != nil {
-			log.Printf("LevelHandler: failed to open file %s: %v", filePath, err)
-			http.Error(w, "Puzzle file not found", http.StatusNotFound)
+			globals.RenderInfoPage(tpl, w, true, map[string]any{
+				"Unexpected": true,
+			})
+			log.Printf("failed to open puzzle file %s: %v", filePath, err)
 			return
 		}
 		defer file.Close()

@@ -33,7 +33,7 @@ func InputHandler(w http.ResponseWriter, r *http.Request) {
 	sdata := ctx.Value("sessionData").(globals.SessionData)
 
 	if sdata.NextReleaseLevel <= level {
-		http.Error(w, "Level is not released yet!", http.StatusForbidden)
+		http.Error(w, "Level is not released yet!\nPlease do not request this endpoint repeatedly", http.StatusForbidden)
 		return
 	}
 
@@ -45,13 +45,16 @@ func InputHandler(w http.ResponseWriter, r *http.Request) {
 	fileName := "./puzzles/" + slug + "/inputs/" + strconv.Itoa(sdata.InputID) + ".txt"
 	file, err := os.Open(fileName)
 	if err != nil {
-		log.Panic("file was not found", fileName)
+		log.Printf("File not found : %v\n", err)
+		http.Error(w, "Something weird happened! :( please report this to sceptix@sjec.ac.in", http.StatusForbidden)
+		return
 	}
 
 	defer file.Close()
 	b, err := io.ReadAll(file)
 	if err != nil {
-		log.Panic("can't read the file")
+		log.Printf("can't read the file")
+		return
 	}
 	io.Copy(w, bytes.NewBuffer(b))
 }

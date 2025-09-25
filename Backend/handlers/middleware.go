@@ -20,7 +20,7 @@ func Authenticator(handler http.HandlerFunc) http.HandlerFunc {
 		sdata, err := getSessionData(ctx, c.Value)
 		if err != nil {
 			http.Redirect(w, r, "/login/", http.StatusSeeOther)
-			log.Print("Please login to play", http.StatusUnauthorized)
+			log.Print("Please login to play ", http.StatusUnauthorized)
 			return
 		}
 
