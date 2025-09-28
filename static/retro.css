@@ -4,15 +4,20 @@
   --gold-dark: #ecc67e;
   --bg-dark: #0a0706;
   --code-bg: #1a140f;
-  --text-main: #fafafa;
+  --text-main: #e6e6e6;
 }
 
 html,
 .levelContent {
-  font-family: "Sometype Mono";
-  font-size: 18px;
+  font-size: 20px;
   line-height: 1.45;
   color: var(--text-main);
+}
+
+.levelContent strong {
+  color: var(--text-main);        /* pick a different color */
+  font-weight: bold;
+  text-shadow: 0 0 10px var(--gold-dark);
 }
 
 .levelContent h1 {
@@ -20,6 +25,7 @@ html,
   color: var(--yellow-gold);
   font-size: 3rem;
   margin-top: 0;
+  margin-bottom: 3rem;
 }
 
 .levelContent h2 {
