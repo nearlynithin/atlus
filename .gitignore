@@ -1,5 +1,6 @@
 .env
 .setup
 /puzzles/*
-
+tmp/
+.air.toml
 /data/*
