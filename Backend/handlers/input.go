@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -42,7 +43,7 @@ func InputHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fileName := "./puzzles/" + slug + "/inputs/" + strconv.Itoa(sdata.InputID) + ".txt"
+	fileName := fmt.Sprintf("./puzzles/%s/problem_set/%d.json", slug, sdata.InputID)
 	file, err := os.Open(fileName)
 	if err != nil {
 		log.Printf("File not found : %v\n", err)
@@ -56,7 +57,9 @@ func InputHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("can't read the file")
 		return
 	}
-	io.Copy(w, bytes.NewBuffer(b))
+	var problemSet globals.ProblemSet
+	json.Unmarshal(b, &problemSet)
+	io.Copy(w, bytes.NewBuffer([]byte(problemSet.Input)))
 }
 
 func getLevelParam(slug string) (int, error) {

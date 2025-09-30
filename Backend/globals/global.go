@@ -48,6 +48,11 @@ type SubmissionData struct {
 	Pass         bool
 }
 
+type ProblemSet struct {
+	Input  string `json:"input"`
+	Output string `json:"output"`
+}
+
 type SubmissionStatus int
 
 const (
