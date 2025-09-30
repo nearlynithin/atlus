@@ -2,13 +2,13 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	pgx "github.com/jackc/pgx/v5"
 	"github.com/sceptix-club/atlus/Backend/globals"
@@ -56,8 +56,8 @@ func SubmitAnswerHandler(tpl *template.Template) http.HandlerFunc {
 			return
 		}
 
-		answerFile := fmt.Sprintf("./puzzles/%s/outputs/%d.txt", newSlug, sdata.InputID)
-		correctBytes, err := os.ReadFile(answerFile)
+		answerFile := fmt.Sprintf("./puzzles/%s/problem_set/%d.json", newSlug, sdata.InputID)
+		b, err := os.ReadFile(answerFile)
 		if err != nil {
 			globals.RenderInfoPage(tpl, w, true, map[string]any{
 				"Unexpected": true,
@@ -65,7 +65,8 @@ func SubmitAnswerHandler(tpl *template.Template) http.HandlerFunc {
 			log.Printf("Correct answer file not found! %v\n", err)
 			return
 		}
-		solution := strings.TrimSpace(string(correctBytes))
+		var problemSet globals.ProblemSet
+		json.Unmarshal(b, &problemSet)
 
 		submissionData.CurrentLevel = sdata.CurrentLevel
 		submissionData.GithubID = sdata.GithubID
@@ -73,7 +74,7 @@ func SubmitAnswerHandler(tpl *template.Template) http.HandlerFunc {
 		submissionData.PuzzleLevel = level
 
 		// Compare answers
-		if answer == solution {
+		if answer == strings.TrimSpace(problemSet.Output) {
 			submissionData.Pass = true
 		} else {
 			submissionData.Pass = false
@@ -151,15 +152,18 @@ func updateUserAttempt(ctx context.Context, submissionData globals.SubmissionDat
 
 func submissionTx(ctx context.Context, tx pgx.Tx, submissionData globals.SubmissionData) (globals.SubmissionStatus, error) {
 
-	var existingAttempts int
 	var hasPassed bool
-	var cooldownEnd time.Time
+	var cooldown bool
+
+	cooldownSteps := 15 // in minutes
 
 	err := tx.QueryRow(ctx, `
-        SELECT COALESCE(attempts, 0), COALESCE(passed, FALSE), COALESCE(cooldown, NOW())
+        SELECT
+            COALESCE(passed, FALSE),
+            (cooldown IS NOT NULL AND cooldown >= NOW()) AS cooldown_active
         FROM submissions
         WHERE github_id = $1 AND level_id = $2
-        `, submissionData.GithubID, submissionData.PuzzleLevel).Scan(&existingAttempts, &hasPassed, &cooldownEnd)
+        `, submissionData.GithubID, submissionData.PuzzleLevel).Scan(&hasPassed, &cooldown)
 
 	if err != nil && err != pgx.ErrNoRows {
 		return globals.SubmissionError, fmt.Errorf("Error checking existing submission: %v", err)
@@ -170,36 +174,23 @@ func submissionTx(ctx context.Context, tx pgx.Tx, submissionData globals.Submiss
 	}
 
 	// cooldown not complete yet
-	if time.Now().UTC().Before(cooldownEnd) {
+	if cooldown {
 		return globals.Cooldown, nil
 	}
 
-	var newAttempts int
+	var attempts int
 	err = tx.QueryRow(ctx, `
-            INSERT INTO submissions (github_id, username, level_id, last_submission, attempts)
-            VALUES ($1, $2, $3, NOW(), 1)
+            INSERT INTO submissions (github_id, username, level_id, last_submission, attempts, cooldown)
+            VALUES ($1, $2, $3, NOW(), 1, NOW())
             ON CONFLICT (github_id, level_id)
             DO UPDATE SET
                 last_submission = NOW(),
-                attempts = submissions.attempts + 1
+                attempts = submissions.attempts + 1,
+                cooldown = NOW() + (FLOOR((submissions.attempts + 1) / 3.0) * $4 * INTERVAL '1 minute')
             RETURNING attempts
-        `, submissionData.GithubID, submissionData.Username, submissionData.PuzzleLevel).Scan(&newAttempts)
+        `, submissionData.GithubID, submissionData.Username, submissionData.PuzzleLevel, cooldownSteps).Scan(&attempts)
 	if err != nil {
 		return globals.SubmissionError, fmt.Errorf("error inserting/updating submission: %v", err)
-	}
-
-	if newAttempts%3 == 0 {
-		cooldownMinutes := (newAttempts / 3) * 15
-		cooldownDuration := fmt.Sprintf("%d minutes", int(cooldownMinutes))
-
-		_, err := tx.Exec(ctx, `
-            UPDATE submissions SET
-            cooldown = NOW() + $1
-            WHERE github_id = $2 AND level_id = $3
-            `, cooldownDuration, submissionData.GithubID, submissionData.PuzzleLevel)
-		if err != nil {
-			return globals.SubmissionError, fmt.Errorf("error setting cooldown, %v", err)
-		}
 	}
 
 	if submissionData.Pass {
@@ -218,7 +209,7 @@ func submissionTx(ctx context.Context, tx pgx.Tx, submissionData globals.Submiss
 			return globals.SubmissionError, fmt.Errorf("error updating submission as passed, %v", err)
 		}
 
-		if newAttempts == 1 {
+		if attempts == 1 {
 			_, err := tx.Exec(ctx, `
                 UPDATE users SET
                 streak = streak + 1
